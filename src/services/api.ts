@@ -1,60 +1,28 @@
-import { Platform } from 'react-native';
+import { getApi } from '../config/api';
+import { AxiosInstance } from 'axios';
 
-const API_BASE_URL = __DEV__
-  ? Platform.select({
-      android: 'http://10.0.2.2:3000',
-      ios: 'http://localhost:3000',
-      default: 'http://localhost:3000',
-    })
-  : 'https://api.economiza.com';
+const apiInstance: AxiosInstance = getApi();
 
 export const api = {
-  baseURL: API_BASE_URL,
-  
+  baseURL: apiInstance.defaults.baseURL || '',
+
   async get<T>(endpoint: string): Promise<T> {
-    const response = await fetch(`${API_BASE_URL}${endpoint}`);
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    return response.json();
+    const response = await apiInstance.get<T>(endpoint);
+    return response.data;
   },
 
   async post<T>(endpoint: string, data: unknown): Promise<T> {
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(data),
-    });
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    return response.json();
+    const response = await apiInstance.post<T>(endpoint, data);
+    return response.data;
   },
 
   async put<T>(endpoint: string, data: unknown): Promise<T> {
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(data),
-    });
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    return response.json();
+    const response = await apiInstance.put<T>(endpoint, data);
+    return response.data;
   },
 
   async delete<T>(endpoint: string): Promise<T> {
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-      method: 'DELETE',
-    });
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    return response.json();
+    const response = await apiInstance.delete<T>(endpoint);
+    return response.data;
   },
 };
-
