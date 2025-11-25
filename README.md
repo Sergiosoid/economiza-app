@@ -91,7 +91,55 @@ src/
 │   └── testConnection.ts
 └── types/             # Tipos TypeScript
     └── api.ts         # Tipos das respostas da API
+assets/
+├── images/            # Imagens do app (ícones, ilustrações, etc)
+│   └── .keep          # Arquivo placeholder para manter a pasta no git
+├── icon.png           # Ícone do app (1024x1024)
+├── splash.png         # Imagem de splash screen
+├── adaptive-icon.png  # Ícone adaptativo para Android
+└── favicon.png        # Favicon para web
 ```
+
+## Assets e Imagens
+
+### Estrutura de Assets
+
+O projeto usa a pasta `assets/` para armazenar imagens e recursos estáticos:
+
+- **`assets/images/`**: Pasta para imagens usadas no app (ícones, ilustrações, etc)
+  - O arquivo `.keep` existe para garantir que a pasta seja versionada no Git mesmo quando vazia
+  - Adicione suas imagens aqui durante o desenvolvimento
+
+- **`assets/icon.png`**: Ícone principal do app (1024x1024px)
+- **`assets/splash.png`**: Imagem exibida durante o carregamento inicial
+- **`assets/adaptive-icon.png`**: Ícone adaptativo para Android (foreground)
+- **`assets/favicon.png`**: Favicon para versão web
+
+### Como Adicionar Novas Imagens
+
+1. **Imagens do app** (ícones, ilustrações, etc):
+   ```bash
+   # Adicione suas imagens em assets/images/
+   cp minha-imagem.png assets/images/
+   ```
+
+2. **Usar imagens no código**:
+   ```typescript
+   import { Image } from 'react-native';
+   
+   <Image 
+     source={require('../assets/images/minha-imagem.png')} 
+     style={{ width: 100, height: 100 }}
+   />
+   ```
+
+3. **Substituir ícones do app**:
+   - Substitua os arquivos em `assets/` (icon.png, splash.png, etc)
+   - Execute `expo prebuild` se necessário para regenerar os ícones nativos
+
+### Por que o arquivo `.keep` existe?
+
+O arquivo `assets/images/.keep` existe para garantir que a pasta `assets/images/` seja versionada no Git mesmo quando vazia. Isso evita erros do Expo que tentam fazer `scandir` em uma pasta que não existe no repositório.
 
 ## Desenvolvimento
 
