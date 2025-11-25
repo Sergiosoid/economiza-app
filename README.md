@@ -77,18 +77,31 @@ O app suporta sincronização offline:
 ```
 src/
 ├── components/          # Componentes reutilizáveis
-│   └── ConfirmationModal.tsx
+│   ├── Button.tsx      # Botão padronizado
+│   ├── Card.tsx        # Card container
+│   ├── Divider.tsx     # Divisor visual
+│   ├── Loading.tsx     # Estado de carregamento
+│   ├── ScreenContainer.tsx  # Container de tela
+│   ├── Typography.tsx  # Texto tipográfico
+│   └── index.ts        # Barrel export
 ├── config/             # Configurações
 │   ├── api.ts          # Configuração da API (BASE_URL)
 │   └── settings.ts     # Configurações gerais (DEV_TOKEN)
 ├── screens/            # Telas do app
 │   ├── HomeScreen.tsx
 │   ├── ScannerScreen.tsx
-│   └── ReceiptDetailScreen.tsx
+│   ├── ReceiptDetailScreen.tsx
+│   ├── AnalyticsScreen.tsx
+│   ├── TopItemsScreen.tsx
+│   ├── CompareStoresScreen.tsx
+│   └── OnboardingScreen.tsx
 ├── services/           # Serviços
 │   ├── api.ts         # Cliente HTTP
 │   ├── offlineSync.ts # Sincronização offline
 │   └── testConnection.ts
+├── theme/             # Sistema de temas
+│   ├── colors.ts      # Paleta de cores (light/dark)
+│   └── ThemeContext.tsx  # Context API para tema
 └── types/             # Tipos TypeScript
     └── api.ts         # Tipos das respostas da API
 assets/
@@ -98,6 +111,110 @@ assets/
 ├── splash.png         # Imagem de splash screen
 ├── adaptive-icon.png  # Ícone adaptativo para Android
 └── favicon.png        # Favicon para web
+```
+
+## Sistema de Temas
+
+O app possui um sistema completo de temas com suporte a modo claro e escuro.
+
+### Uso do Tema
+
+```typescript
+import { useTheme } from '../theme/ThemeContext';
+
+const MyComponent = () => {
+  const { colors, colorScheme, toggleTheme, setTheme } = useTheme();
+  
+  return (
+    <View style={{ backgroundColor: colors.background }}>
+      <Text style={{ color: colors.textPrimary }}>Texto</Text>
+    </View>
+  );
+};
+```
+
+### Cores Disponíveis
+
+- **Primárias**: `primary`, `primaryDark`, `primaryLight`
+- **Secundárias**: `secondary`, `secondaryDark`, `secondaryLight`
+- **Backgrounds**: `background`, `surface`, `surfaceVariant`
+- **Textos**: `textPrimary`, `textSecondary`, `textTertiary`, `textOnPrimary`
+- **Estados**: `success`, `warning`, `error`, `info`
+- **Bordas**: `border`, `divider`
+- **Overlay**: `overlay`, `overlayLight`
+
+### Persistência
+
+A preferência de tema é salva automaticamente no `AsyncStorage` e restaurada na próxima abertura do app.
+
+## Componentes Globais
+
+O app possui uma biblioteca de componentes padronizados:
+
+### Button
+
+```typescript
+<Button
+  title="Clique aqui"
+  onPress={() => {}}
+  variant="primary"  // primary | secondary | outline | ghost
+  size="medium"     // small | medium | large
+  disabled={false}
+  loading={false}
+  fullWidth={true}
+/>
+```
+
+### Card
+
+```typescript
+<Card variant="elevated" padding={16}>
+  <Typography variant="h4">Título</Typography>
+</Card>
+```
+
+### Typography
+
+```typescript
+<Typography
+  variant="h1"      // h1 | h2 | h3 | h4 | body | body2 | caption | button | overline
+  color="primary"   // primary | secondary | tertiary | error | success | warning | info
+  bold={false}
+>
+  Texto
+</Typography>
+```
+
+### ScreenContainer
+
+```typescript
+<ScreenContainer scrollable>
+  {/* Conteúdo */}
+</ScreenContainer>
+```
+
+### Loading
+
+```typescript
+<Loading message="Carregando..." size="large" />
+```
+
+### Divider
+
+```typescript
+<Divider vertical={false} spacing={16} />
+```
+
+## Onboarding
+
+O app possui uma tela de onboarding que aparece apenas na primeira execução:
+
+- **3 slides** explicando as funcionalidades principais
+- **Navegação** com botões "Próximo", "Pular" e "Começar"
+- **Persistência** usando AsyncStorage
+- **Design** moderno e responsivo
+
+Para resetar o onboarding (útil para testes), remova a chave `@economiza:onboarding_completed` do AsyncStorage.
 ```
 
 ## Assets e Imagens

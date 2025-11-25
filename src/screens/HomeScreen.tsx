@@ -1,16 +1,15 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
-  Text,
   StyleSheet,
-  TouchableOpacity,
   ScrollView,
-  ActivityIndicator,
   RefreshControl,
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { listReceipts, getMonthlySummary } from '../services/api';
 import { ReceiptListItem, MonthlySummaryResponse } from '../types/api';
+import { ScreenContainer, Button, Card, Typography, Loading } from '../components';
+import { useTheme } from '../theme/ThemeContext';
 
 export const HomeScreen = () => {
   const [receipts, setReceipts] = useState<ReceiptListItem[]>([]);
@@ -18,6 +17,7 @@ export const HomeScreen = () => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const navigation = useNavigation();
+  const { colors } = useTheme();
 
   const loadReceipts = async () => {
     try {
@@ -25,7 +25,6 @@ export const HomeScreen = () => {
       setReceipts(response.receipts);
     } catch (error) {
       console.error('Erro ao carregar receipts:', error);
-      // Em caso de erro, manter lista vazia
       setReceipts([]);
     } finally {
       setLoading(false);
@@ -42,7 +41,6 @@ export const HomeScreen = () => {
       setMonthlySummary(summary);
     } catch (error) {
       console.error('Erro ao carregar resumo mensal:', error);
-      // Em caso de erro, manter null
       setMonthlySummary(null);
     }
   };
@@ -52,7 +50,6 @@ export const HomeScreen = () => {
     loadMonthlySummary();
   }, []);
 
-  // Recarregar quando a tela receber foco (após voltar de outras telas)
   useFocusEffect(
     useCallback(() => {
       loadReceipts();
@@ -66,16 +63,16 @@ export const HomeScreen = () => {
     loadMonthlySummary();
   };
 
-  const handleOpenAnalytics = () => {
-    navigation.navigate('Analytics' as never);
-  };
-
   const handleOpenScanner = () => {
     navigation.navigate('Scanner' as never);
   };
 
   const handleReceiptPress = (receiptId: string) => {
     navigation.navigate('ReceiptDetail' as never, { receiptId } as never);
+  };
+
+  const handleOpenAnalytics = () => {
+    navigation.navigate('Analytics' as never);
   };
 
   const formatCurrency = (value: number) => {
@@ -96,69 +93,71 @@ export const HomeScreen = () => {
 
   if (loading) {
     return (
-      <View style={styles.container}>
-        <View style={styles.header}>
-          <Text style={styles.title}>Minhas Compras</Text>
-        </View>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#007AFF" />
-        </View>
-      </View>
+      <ScreenContainer>
+        <Loading message="Carregando suas compras..." />
+      </ScreenContainer>
     );
   }
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Minhas Compras</Text>
+    <ScreenContainer scrollable>
+      <View style={[styles.header, { backgroundColor: colors.surface }]}>
+        <Typography variant="h1">Minhas Compras</Typography>
       </View>
 
-      <TouchableOpacity
-        style={styles.scanButton}
-        onPress={handleOpenScanner}
-      >
-        <Text style={styles.scanButtonText}>Escanear Nota</Text>
-      </TouchableOpacity>
+      <View style={styles.actionsContainer}>
+        <Button
+          title="Escanear Nota"
+          onPress={handleOpenScanner}
+          variant="primary"
+          size="large"
+          fullWidth
+        />
+      </View>
 
       {/* Card de Resumo Mensal */}
       {monthlySummary && (
-        <View style={styles.summaryCard}>
+        <Card variant="elevated" style={styles.summaryCard}>
           <View style={styles.summaryHeader}>
-            <Text style={styles.summaryTitle}>Resumo do Mês</Text>
-            <TouchableOpacity onPress={handleOpenAnalytics}>
-              <Text style={styles.summaryLink}>Ver Detalhes</Text>
-            </TouchableOpacity>
+            <Typography variant="h4">Resumo do Mês</Typography>
+            <Button
+              title="Ver Detalhes"
+              onPress={handleOpenAnalytics}
+              variant="ghost"
+              size="small"
+            />
           </View>
           <View style={styles.summaryContent}>
             <View style={styles.summaryItem}>
-              <Text style={styles.summaryLabel}>Total Gasto</Text>
-              <Text style={styles.summaryValue}>
+              <Typography variant="caption" color="secondary">Total Gasto</Typography>
+              <Typography variant="h3" style={{ color: colors.primary }}>
                 {formatCurrency(monthlySummary.total_mes)}
-              </Text>
+              </Typography>
             </View>
-            <View style={styles.summaryDivider} />
+            <View style={[styles.summaryDivider, { backgroundColor: colors.divider }]} />
             <View style={styles.summaryItem}>
-              <Text style={styles.summaryLabel}>Impostos</Text>
-              <Text style={styles.summaryValue}>
+              <Typography variant="caption" color="secondary">Impostos</Typography>
+              <Typography variant="h4">
                 {formatCurrency(monthlySummary.total_mes * 0.1)}
-              </Text>
+              </Typography>
             </View>
           </View>
-          {/* Mini gráfico placeholder */}
-          <View style={styles.miniChart}>
-            <Text style={styles.miniChartText}>
+          <View style={[styles.miniChart, { backgroundColor: colors.surfaceVariant }]}>
+            <Typography variant="caption" color="tertiary">
               📊 Gráfico de gastos (em desenvolvimento)
-            </Text>
+            </Typography>
           </View>
-        </View>
+        </Card>
       )}
 
-      <TouchableOpacity
-        style={styles.analyticsButton}
-        onPress={handleOpenAnalytics}
-      >
-        <Text style={styles.analyticsButtonText}>📊 Resumo de Gastos</Text>
-      </TouchableOpacity>
+      <View style={styles.actionsContainer}>
+        <Button
+          title="📊 Resumo de Gastos"
+          onPress={handleOpenAnalytics}
+          variant="secondary"
+          fullWidth
+        />
+      </View>
 
       <ScrollView
         style={styles.listContainer}
@@ -167,197 +166,113 @@ export const HomeScreen = () => {
         }
       >
         {receipts.length === 0 ? (
-          <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>Nenhuma nota cadastrada</Text>
-            <Text style={styles.emptySubtext}>
+          <Card variant="outlined" style={styles.emptyCard}>
+            <Typography variant="h4" style={styles.emptyText}>
+              Nenhuma nota cadastrada
+            </Typography>
+            <Typography variant="body2" color="secondary" style={styles.emptySubtext}>
               Escaneie uma nota fiscal para começar
-            </Text>
-          </View>
+            </Typography>
+          </Card>
         ) : (
           receipts.map((receipt) => (
-            <TouchableOpacity
+            <Card
               key={receipt.id}
+              variant="elevated"
               style={styles.receiptCard}
-              onPress={() => handleReceiptPress(receipt.id)}
             >
               <View style={styles.cardHeader}>
-                <Text style={styles.storeName}>
+                <Typography variant="h4" style={styles.storeName}>
                   {receipt.store_name || 'Loja não identificada'}
-                </Text>
-                <Text style={styles.totalValue}>
+                </Typography>
+                <Typography variant="h3" style={{ color: colors.primary }}>
                   {formatCurrency(receipt.total_value)}
-                </Text>
+                </Typography>
               </View>
               <View style={styles.cardDetails}>
-                <Text style={styles.dateText}>
+                <Typography variant="body2" color="secondary">
                   {formatDate(receipt.emitted_at || receipt.created_at)}
-                </Text>
+                </Typography>
                 {receipt.total_tax > 0 && (
-                  <View style={styles.taxIndicator}>
-                    <Text style={styles.taxText}>
+                  <View style={[styles.taxIndicator, { backgroundColor: colors.surfaceVariant }]}>
+                    <Typography variant="caption" color="secondary">
                       Impostos: {formatCurrency(receipt.total_tax)}
-                    </Text>
+                    </Typography>
                   </View>
                 )}
               </View>
-            </TouchableOpacity>
+              <Button
+                title="Ver Detalhes"
+                onPress={() => handleReceiptPress(receipt.id)}
+                variant="outline"
+                size="small"
+                style={styles.detailsButton}
+              />
+            </Card>
           ))
         )}
       </ScrollView>
-    </View>
+    </ScreenContainer>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f5f5f5',
-  },
   header: {
-    backgroundColor: '#fff',
     padding: 20,
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
   },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  scanButton: {
-    backgroundColor: '#34C759',
-    margin: 20,
+  actionsContainer: {
+    paddingHorizontal: 20,
     paddingVertical: 16,
-    paddingHorizontal: 24,
-    borderRadius: 12,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  scanButtonText: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: '600',
   },
   summaryCard: {
-    backgroundColor: '#fff',
     marginHorizontal: 20,
     marginBottom: 16,
-    padding: 16,
-    borderRadius: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
   },
   summaryHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
-  },
-  summaryTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#333',
-  },
-  summaryLink: {
-    fontSize: 14,
-    color: '#007AFF',
-    fontWeight: '500',
+    marginBottom: 16,
   },
   summaryContent: {
     flexDirection: 'row',
     justifyContent: 'space-around',
-    paddingVertical: 12,
+    paddingVertical: 16,
   },
   summaryItem: {
     alignItems: 'center',
     flex: 1,
   },
-  summaryLabel: {
-    fontSize: 12,
-    color: '#666',
-    marginBottom: 4,
-  },
-  summaryValue: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#007AFF',
-  },
   summaryDivider: {
     width: 1,
-    backgroundColor: '#e0e0e0',
     marginHorizontal: 16,
   },
   miniChart: {
     marginTop: 12,
     padding: 12,
-    backgroundColor: '#f9f9f9',
     borderRadius: 8,
     alignItems: 'center',
-  },
-  miniChartText: {
-    fontSize: 12,
-    color: '#999',
-  },
-  analyticsButton: {
-    backgroundColor: '#007AFF',
-    marginHorizontal: 20,
-    marginBottom: 16,
-    paddingVertical: 14,
-    paddingHorizontal: 24,
-    borderRadius: 12,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  analyticsButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
   },
   listContainer: {
     flex: 1,
     paddingHorizontal: 20,
   },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
+  emptyCard: {
+    padding: 40,
     alignItems: 'center',
-  },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingVertical: 60,
+    marginTop: 20,
   },
   emptyText: {
-    fontSize: 18,
-    color: '#666',
     marginBottom: 8,
+    textAlign: 'center',
   },
   emptySubtext: {
-    fontSize: 14,
-    color: '#999',
+    textAlign: 'center',
   },
   receiptCard: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
     marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
   },
   cardHeader: {
     flexDirection: 'row',
@@ -366,35 +281,21 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   storeName: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#333',
     flex: 1,
     marginRight: 12,
-  },
-  totalValue: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#007AFF',
   },
   cardDetails: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-  },
-  dateText: {
-    fontSize: 14,
-    color: '#666',
+    marginBottom: 12,
   },
   taxIndicator: {
-    backgroundColor: '#fff3cd',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 4,
   },
-  taxText: {
-    fontSize: 12,
-    color: '#856404',
-    fontWeight: '500',
+  detailsButton: {
+    marginTop: 8,
   },
 });
