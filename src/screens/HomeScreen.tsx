@@ -9,11 +9,12 @@ import {
   RefreshControl,
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
-import { listReceipts } from '../services/api';
-import { ReceiptListItem } from '../types/api';
+import { listReceipts, getMonthlySummary } from '../services/api';
+import { ReceiptListItem, MonthlySummaryResponse } from '../types/api';
 
 export const HomeScreen = () => {
   const [receipts, setReceipts] = useState<ReceiptListItem[]>([]);
+  const [monthlySummary, setMonthlySummary] = useState<MonthlySummaryResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const navigation = useNavigation();
@@ -32,20 +33,41 @@ export const HomeScreen = () => {
     }
   };
 
+  const loadMonthlySummary = async () => {
+    try {
+      const currentDate = new Date();
+      const currentYear = currentDate.getFullYear();
+      const currentMonth = currentDate.getMonth() + 1;
+      const summary = await getMonthlySummary(currentYear, currentMonth);
+      setMonthlySummary(summary);
+    } catch (error) {
+      console.error('Erro ao carregar resumo mensal:', error);
+      // Em caso de erro, manter null
+      setMonthlySummary(null);
+    }
+  };
+
   useEffect(() => {
     loadReceipts();
+    loadMonthlySummary();
   }, []);
 
   // Recarregar quando a tela receber foco (após voltar de outras telas)
   useFocusEffect(
     useCallback(() => {
       loadReceipts();
+      loadMonthlySummary();
     }, [])
   );
 
   const handleRefresh = () => {
     setRefreshing(true);
     loadReceipts();
+    loadMonthlySummary();
+  };
+
+  const handleOpenAnalytics = () => {
+    navigation.navigate('Analytics' as never);
   };
 
   const handleOpenScanner = () => {
@@ -96,6 +118,46 @@ export const HomeScreen = () => {
         onPress={handleOpenScanner}
       >
         <Text style={styles.scanButtonText}>Escanear Nota</Text>
+      </TouchableOpacity>
+
+      {/* Card de Resumo Mensal */}
+      {monthlySummary && (
+        <View style={styles.summaryCard}>
+          <View style={styles.summaryHeader}>
+            <Text style={styles.summaryTitle}>Resumo do Mês</Text>
+            <TouchableOpacity onPress={handleOpenAnalytics}>
+              <Text style={styles.summaryLink}>Ver Detalhes</Text>
+            </TouchableOpacity>
+          </View>
+          <View style={styles.summaryContent}>
+            <View style={styles.summaryItem}>
+              <Text style={styles.summaryLabel}>Total Gasto</Text>
+              <Text style={styles.summaryValue}>
+                {formatCurrency(monthlySummary.total_mes)}
+              </Text>
+            </View>
+            <View style={styles.summaryDivider} />
+            <View style={styles.summaryItem}>
+              <Text style={styles.summaryLabel}>Impostos</Text>
+              <Text style={styles.summaryValue}>
+                {formatCurrency(monthlySummary.total_mes * 0.1)}
+              </Text>
+            </View>
+          </View>
+          {/* Mini gráfico placeholder */}
+          <View style={styles.miniChart}>
+            <Text style={styles.miniChartText}>
+              📊 Gráfico de gastos (em desenvolvimento)
+            </Text>
+          </View>
+        </View>
+      )}
+
+      <TouchableOpacity
+        style={styles.analyticsButton}
+        onPress={handleOpenAnalytics}
+      >
+        <Text style={styles.analyticsButtonText}>📊 Resumo de Gastos</Text>
       </TouchableOpacity>
 
       <ScrollView
@@ -178,6 +240,88 @@ const styles = StyleSheet.create({
   scanButtonText: {
     color: '#fff',
     fontSize: 18,
+    fontWeight: '600',
+  },
+  summaryCard: {
+    backgroundColor: '#fff',
+    marginHorizontal: 20,
+    marginBottom: 16,
+    padding: 16,
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  summaryHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  summaryTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#333',
+  },
+  summaryLink: {
+    fontSize: 14,
+    color: '#007AFF',
+    fontWeight: '500',
+  },
+  summaryContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    paddingVertical: 12,
+  },
+  summaryItem: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  summaryLabel: {
+    fontSize: 12,
+    color: '#666',
+    marginBottom: 4,
+  },
+  summaryValue: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#007AFF',
+  },
+  summaryDivider: {
+    width: 1,
+    backgroundColor: '#e0e0e0',
+    marginHorizontal: 16,
+  },
+  miniChart: {
+    marginTop: 12,
+    padding: 12,
+    backgroundColor: '#f9f9f9',
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  miniChartText: {
+    fontSize: 12,
+    color: '#999',
+  },
+  analyticsButton: {
+    backgroundColor: '#007AFF',
+    marginHorizontal: 20,
+    marginBottom: 16,
+    paddingVertical: 14,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  analyticsButtonText: {
+    color: '#fff',
+    fontSize: 16,
     fontWeight: '600',
   },
   listContainer: {

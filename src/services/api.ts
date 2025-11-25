@@ -6,6 +6,9 @@ import {
   ScanReceiptProcessingResponse,
   ScanReceiptConflictResponse,
   ReceiptListResponse,
+  MonthlySummaryResponse,
+  TopItemsResponse,
+  StoreComparisonResponse,
 } from '../types/api';
 
 const apiInstance: AxiosInstance = getApi();
@@ -68,6 +71,67 @@ export async function listReceipts(
 ): Promise<ReceiptListResponse> {
   const response = await apiInstance.get<ReceiptListResponse>(
     `/api/v1/receipts/list?limit=${limit}&offset=${offset}`,
+    {
+      headers: {
+        Authorization: `Bearer ${DEV_TOKEN}`,
+      },
+    }
+  );
+  return response.data;
+}
+
+/**
+ * Obtém resumo mensal de gastos
+ * @param year Ano (ex: 2024)
+ * @param month Mês (1-12)
+ * @param use_cache Usar cache se disponível (padrão: true)
+ * @returns Resumo mensal com totais, categorias, top itens e variação
+ */
+export async function getMonthlySummary(
+  year: number,
+  month: number,
+  use_cache: boolean = true
+): Promise<MonthlySummaryResponse> {
+  const response = await apiInstance.get<MonthlySummaryResponse>(
+    `/api/v1/analytics/monthly-summary?year=${year}&month=${month}&use_cache=${use_cache}`,
+    {
+      headers: {
+        Authorization: `Bearer ${DEV_TOKEN}`,
+      },
+    }
+  );
+  return response.data;
+}
+
+/**
+ * Obtém os itens mais comprados
+ * @param limit Número máximo de itens (padrão: 20, máximo: 100)
+ * @returns Lista de itens ordenados por total gasto
+ */
+export async function getTopItems(
+  limit: number = 20
+): Promise<TopItemsResponse> {
+  const response = await apiInstance.get<TopItemsResponse>(
+    `/api/v1/analytics/top-items?limit=${limit}`,
+    {
+      headers: {
+        Authorization: `Bearer ${DEV_TOKEN}`,
+      },
+    }
+  );
+  return response.data;
+}
+
+/**
+ * Compara preços de um produto em diferentes supermercados
+ * @param product_id ID do produto
+ * @returns Comparação de preços por supermercado
+ */
+export async function getStoreComparison(
+  product_id: string
+): Promise<StoreComparisonResponse> {
+  const response = await apiInstance.get<StoreComparisonResponse>(
+    `/api/v1/analytics/compare-store?product_id=${product_id}`,
     {
       headers: {
         Authorization: `Bearer ${DEV_TOKEN}`,
