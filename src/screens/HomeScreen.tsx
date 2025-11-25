@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import { testConnection } from '../services/testConnection';
 
 export const HomeScreen = () => {
   const [loading, setLoading] = useState(false);
+  const navigation = useNavigation();
 
   const handleTestConnection = async () => {
     setLoading(true);
@@ -25,11 +27,22 @@ export const HomeScreen = () => {
     }
   };
 
+  const handleOpenScanner = () => {
+    navigation.navigate('Scanner' as never);
+  };
+
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Bem-vindo ao Economiza!</Text>
       <Text style={styles.subtitle}>Seu app de economia está pronto para começar.</Text>
       
+      <TouchableOpacity
+        style={[styles.button, styles.primaryButton]}
+        onPress={handleOpenScanner}
+      >
+        <Text style={styles.buttonText}>Escanear QR Code</Text>
+      </TouchableOpacity>
+
       <TouchableOpacity
         style={[styles.button, loading && styles.buttonDisabled]}
         onPress={handleTestConnection}
@@ -70,6 +83,11 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     minWidth: 200,
     alignItems: 'center',
+    marginBottom: 15,
+  },
+  primaryButton: {
+    backgroundColor: '#34C759',
+    marginBottom: 20,
   },
   buttonDisabled: {
     opacity: 0.6,
