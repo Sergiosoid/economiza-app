@@ -83,23 +83,44 @@ export const ReceiptDetailScreen = () => {
 
   return (
     <ScrollView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Nota Fiscal</Text>
-        <Text style={styles.storeName}>{receipt.store_name || 'Loja não identificada'}</Text>
-        {receipt.store_cnpj && (
-          <Text style={styles.cnpj}>CNPJ: {receipt.store_cnpj}</Text>
-        )}
+      {/* Card Principal - Supermercado e Totais */}
+      <View style={styles.mainCard}>
+        <View style={styles.storeHeader}>
+          <Text style={styles.storeName}>
+            {receipt.store_name || 'Loja não identificada'}
+          </Text>
+          {receipt.store_cnpj && (
+            <Text style={styles.cnpj}>CNPJ: {receipt.store_cnpj}</Text>
+          )}
+        </View>
+        
+        <View style={styles.totalSection}>
+          <View style={styles.totalRow}>
+            <Text style={styles.totalLabel}>Total:</Text>
+            <Text style={styles.totalValue}>
+              {formatCurrency(receipt.total_value)}
+            </Text>
+          </View>
+          <View style={styles.totalRow}>
+            <Text style={styles.taxLabel}>Impostos:</Text>
+            <Text style={styles.taxValue}>
+              {formatCurrency(receipt.total_tax)}
+            </Text>
+          </View>
+        </View>
+
+        <View style={styles.dateSection}>
+          <Text style={styles.dateLabel}>Data e Hora:</Text>
+          <Text style={styles.dateValue}>{formatDate(receipt.emitted_at)}</Text>
+        </View>
       </View>
 
-      <View style={styles.section}>
+      {/* Card de Informações */}
+      <View style={styles.infoCard}>
         <Text style={styles.sectionTitle}>Informações</Text>
         <View style={styles.infoRow}>
           <Text style={styles.infoLabel}>Chave de Acesso:</Text>
           <Text style={styles.infoValue}>{receipt.access_key}</Text>
-        </View>
-        <View style={styles.infoRow}>
-          <Text style={styles.infoLabel}>Data de Emissão:</Text>
-          <Text style={styles.infoValue}>{formatDate(receipt.emitted_at)}</Text>
         </View>
         <View style={styles.infoRow}>
           <Text style={styles.infoLabel}>Data de Cadastro:</Text>
@@ -107,34 +128,25 @@ export const ReceiptDetailScreen = () => {
         </View>
       </View>
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Totais</Text>
-        <View style={styles.totalRow}>
-          <Text style={styles.totalLabel}>Subtotal:</Text>
-          <Text style={styles.totalValue}>{formatCurrency(receipt.subtotal)}</Text>
-        </View>
-        <View style={styles.totalRow}>
-          <Text style={styles.totalLabel}>Impostos:</Text>
-          <Text style={styles.totalValue}>{formatCurrency(receipt.total_tax)}</Text>
-        </View>
-        <View style={[styles.totalRow, styles.totalRowFinal]}>
-          <Text style={[styles.totalLabel, styles.totalLabelFinal]}>Total:</Text>
-          <Text style={[styles.totalValue, styles.totalValueFinal]}>
-            {formatCurrency(receipt.total_value)}
-          </Text>
-        </View>
-      </View>
-
-      <View style={styles.section}>
+      {/* Card de Itens */}
+      <View style={styles.itemsCard}>
         <Text style={styles.sectionTitle}>Itens ({receipt.items.length})</Text>
-        {receipt.items.map((item) => (
-          <View key={item.id} style={styles.item}>
+        {receipt.items.map((item, index) => (
+          <View
+            key={item.id}
+            style={[
+              styles.item,
+              index === receipt.items.length - 1 && styles.itemLast,
+            ]}
+          >
             <Text style={styles.itemDescription}>{item.description}</Text>
             <View style={styles.itemDetails}>
               <Text style={styles.itemQuantity}>
                 {item.quantity} x {formatCurrency(item.unit_price)}
               </Text>
-              <Text style={styles.itemTotal}>{formatCurrency(item.total_price)}</Text>
+              <Text style={styles.itemTotal}>
+                {formatCurrency(item.total_price)}
+              </Text>
             </View>
             {item.tax_value > 0 && (
               <Text style={styles.itemTax}>
@@ -153,41 +165,98 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f5f5f5',
   },
-  header: {
+  mainCard: {
     backgroundColor: '#fff',
+    margin: 16,
     padding: 20,
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  storeHeader: {
+    marginBottom: 20,
+    paddingBottom: 16,
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
   },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 10,
-  },
   storeName: {
-    fontSize: 18,
+    fontSize: 22,
+    fontWeight: 'bold',
     color: '#333',
-    marginBottom: 5,
+    marginBottom: 6,
   },
   cnpj: {
     fontSize: 14,
     color: '#666',
   },
-  section: {
+  totalSection: {
+    marginBottom: 16,
+  },
+  totalRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  totalLabel: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#333',
+  },
+  totalValue: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#007AFF',
+  },
+  taxLabel: {
+    fontSize: 14,
+    color: '#666',
+  },
+  taxValue: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#856404',
+  },
+  dateSection: {
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#e0e0e0',
+  },
+  dateLabel: {
+    fontSize: 12,
+    color: '#999',
+    marginBottom: 4,
+  },
+  dateValue: {
+    fontSize: 16,
+    color: '#333',
+    fontWeight: '500',
+  },
+  infoCard: {
     backgroundColor: '#fff',
-    marginTop: 10,
+    marginHorizontal: 16,
+    marginBottom: 16,
     padding: 20,
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: '600',
-    marginBottom: 15,
+    marginBottom: 16,
     color: '#333',
   },
   infoRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 10,
+    marginBottom: 12,
   },
   infoLabel: {
     fontSize: 14,
@@ -199,40 +268,27 @@ const styles = StyleSheet.create({
     color: '#000',
     flex: 2,
     textAlign: 'right',
+    fontWeight: '500',
   },
-  totalRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 10,
-  },
-  totalRowFinal: {
-    marginTop: 10,
-    paddingTop: 10,
-    borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
-  },
-  totalLabel: {
-    fontSize: 16,
-    color: '#666',
-  },
-  totalLabelFinal: {
-    fontSize: 18,
-    fontWeight: '600',
-  },
-  totalValue: {
-    fontSize: 16,
-    color: '#000',
-    fontWeight: '600',
-  },
-  totalValueFinal: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#007AFF',
+  itemsCard: {
+    backgroundColor: '#fff',
+    marginHorizontal: 16,
+    marginBottom: 16,
+    padding: 20,
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
   },
   item: {
-    paddingVertical: 15,
+    paddingVertical: 16,
     borderBottomWidth: 1,
     borderBottomColor: '#f0f0f0',
+  },
+  itemLast: {
+    borderBottomWidth: 0,
   },
   itemDescription: {
     fontSize: 16,
@@ -243,7 +299,8 @@ const styles = StyleSheet.create({
   itemDetails: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 5,
+    alignItems: 'center',
+    marginBottom: 4,
   },
   itemQuantity: {
     fontSize: 14,
@@ -257,7 +314,7 @@ const styles = StyleSheet.create({
   itemTax: {
     fontSize: 12,
     color: '#999',
-    marginTop: 5,
+    marginTop: 4,
   },
   errorText: {
     fontSize: 16,

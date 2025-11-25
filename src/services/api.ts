@@ -5,6 +5,7 @@ import {
   ScanReceiptResponse,
   ScanReceiptProcessingResponse,
   ScanReceiptConflictResponse,
+  ReceiptListResponse,
 } from '../types/api';
 
 const apiInstance: AxiosInstance = getApi();
@@ -46,6 +47,27 @@ export async function scanReceipt(
   >(
     '/api/v1/receipts/scan',
     { qr_text },
+    {
+      headers: {
+        Authorization: `Bearer ${DEV_TOKEN}`,
+      },
+    }
+  );
+  return response.data;
+}
+
+/**
+ * Lista todas as notas fiscais do usuário
+ * @param limit Número máximo de resultados (padrão: 50)
+ * @param offset Número de resultados para pular (padrão: 0)
+ * @returns Lista de receipts
+ */
+export async function listReceipts(
+  limit: number = 50,
+  offset: number = 0
+): Promise<ReceiptListResponse> {
+  const response = await apiInstance.get<ReceiptListResponse>(
+    `/api/v1/receipts/list?limit=${limit}&offset=${offset}`,
     {
       headers: {
         Authorization: `Bearer ${DEV_TOKEN}`,

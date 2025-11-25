@@ -48,3 +48,20 @@ export interface ReceiptItemResponse {
   created_at: string;
 }
 
+export interface ReceiptListItem {
+  id: string;
+  store_name: string | null;
+  store_cnpj: string | null;
+  total_value: number;
+  total_tax: number;
+  emitted_at: string | null;
+  created_at: string | null;
+}
+
+export interface ReceiptListResponse {
+  receipts: ReceiptListItem[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
