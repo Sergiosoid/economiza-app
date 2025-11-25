@@ -7,5 +7,5 @@ export const API_BASE = __DEV__
 
 // Token de teste para desenvolvimento
 // TODO: Substituir por autenticação real (JWT)
-export const DEV_TOKEN = 'test-token-123';
+export const DEV_TOKEN = 'test';
 

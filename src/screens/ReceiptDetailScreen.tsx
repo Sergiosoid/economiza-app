@@ -26,8 +26,8 @@ export const ReceiptDetailScreen = () => {
 
   const loadReceipt = async () => {
     try {
-      const api = getApi();
-      const response = await api.get<ReceiptDetailResponse>(
+      const apiInstance = getApi();
+      const response = await apiInstance.get<ReceiptDetailResponse>(
         `/api/v1/receipts/${receiptId}`,
         {
           headers: {

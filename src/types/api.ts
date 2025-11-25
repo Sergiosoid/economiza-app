@@ -8,7 +8,13 @@ export interface ScanReceiptRequest {
 
 export interface ScanReceiptResponse {
   receipt_id: string;
-  status: 'saved' | 'processing';
+  status: 'saved';
+}
+
+export interface ScanReceiptProcessingResponse {
+  status: 'processing';
+  task_id: string;
+  message: string;
 }
 
 export interface ScanReceiptConflictResponse {

@@ -11,12 +11,12 @@ import {
 import { CameraView, CameraType, useCameraPermissions } from 'expo-camera';
 import * as Haptics from 'expo-haptics';
 import { useNavigation } from '@react-navigation/native';
-import { getApi } from '../config/api';
-import { DEV_TOKEN } from '../config/settings';
-import { ScanReceiptResponse, ScanReceiptConflictResponse } from '../types/api';
+import { scanReceipt } from '../services/api';
+import { ScanReceiptResponse, ScanReceiptProcessingResponse, ScanReceiptConflictResponse } from '../types/api';
 import { savePendingScan, syncPendingScans } from '../services/offlineSync';
 import NetInfo from '@react-native-community/netinfo';
 import ConfirmationModal from '../components/ConfirmationModal';
+import ProcessingModal from '../components/ProcessingModal';
 
 const { width, height } = Dimensions.get('window');
 const SCAN_AREA_SIZE = width * 0.7;
@@ -27,6 +27,8 @@ export const ScannerScreen = () => {
   const [qrText, setQrText] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [showConfirmation, setShowConfirmation] = useState(false);
+  const [showProcessing, setShowProcessing] = useState(false);
+  const [processingMessage, setProcessingMessage] = useState<string>('');
   const navigation = useNavigation();
 
   useEffect(() => {
@@ -65,27 +67,63 @@ export const ScannerScreen = () => {
           'O QR code foi salvo e será enviado automaticamente quando a conexão for restaurada.',
           [{ text: 'OK', onPress: () => (navigation as any).goBack() }]
         );
+        setLoading(false);
+        setScanned(false);
+        setQrText(null);
         return;
       }
 
-      // Enviar para o backend
-      const api = getApi();
-      const response = await api.post<ScanReceiptResponse | ScanReceiptConflictResponse>(
-        '/api/v1/receipts/scan',
-        { qr_text: qrText },
-        {
-          headers: {
-            Authorization: `Bearer ${DEV_TOKEN}`,
-          },
-        }
-      );
+      // Enviar para o backend usando a função scanReceipt
+      const response = await scanReceipt(qrText);
 
-      if (response.status === 200 || response.status === 409) {
-        const data = response.data;
-        const receiptId = 'receipt_id' in data ? data.receipt_id : data.receipt_id;
-        
-        // Navegar para ReceiptDetail
-        (navigation as any).navigate('ReceiptDetail', { receiptId });
+      // Tratar diferentes tipos de resposta
+      if ('receipt_id' in response && 'status' in response && response.status === 'saved') {
+        // Status 200: Receipt salvo com sucesso
+        const receiptResponse = response as ScanReceiptResponse;
+        Alert.alert(
+          'Sucesso!',
+          'Nota fiscal processada com sucesso.',
+          [
+            {
+              text: 'Ver Detalhes',
+              onPress: () => {
+                (navigation as any).navigate('ReceiptDetail', { receiptId: receiptResponse.receipt_id });
+                setScanned(false);
+                setQrText(null);
+              },
+            },
+          ]
+        );
+      } else if ('status' in response && response.status === 'processing') {
+        // Status 202: Nota em processamento
+        const processingResponse = response as ScanReceiptProcessingResponse;
+        setProcessingMessage(processingResponse.message || 'Nota em processamento');
+        setShowProcessing(true);
+      } else if ('detail' in response && 'receipt_id' in response) {
+        // Status 409: Nota já existe
+        const conflictResponse = response as ScanReceiptConflictResponse;
+        Alert.alert(
+          'Nota já existente',
+          conflictResponse.detail || 'Esta nota fiscal já foi cadastrada anteriormente.',
+          [
+            {
+              text: 'Ver Detalhes',
+              onPress: () => {
+                (navigation as any).navigate('ReceiptDetail', { receiptId: conflictResponse.receipt_id });
+                setScanned(false);
+                setQrText(null);
+              },
+            },
+            {
+              text: 'OK',
+              style: 'cancel',
+              onPress: () => {
+                setScanned(false);
+                setQrText(null);
+              },
+            },
+          ]
+        );
       } else {
         throw new Error('Resposta inesperada do servidor');
       }
@@ -97,10 +135,30 @@ export const ScannerScreen = () => {
         const status = error.response.status;
         const data = error.response.data;
 
-        if (status === 409) {
+        if (status === 500) {
+          // Erro interno do servidor
+          Alert.alert(
+            'Erro',
+            data?.detail || 'Falha ao processar nota fiscal. Tente novamente mais tarde.',
+            [{ text: 'OK' }]
+          );
+        } else if (status === 409) {
           // Receipt já existe - navegar mesmo assim
           const receiptId = data.receipt_id || (data as any).receipt_id;
-          (navigation as any).navigate('ReceiptDetail', { receiptId });
+          Alert.alert(
+            'Nota já existente',
+            'Esta nota fiscal já foi cadastrada anteriormente.',
+            [
+              {
+                text: 'Ver Detalhes',
+                onPress: () => {
+                  (navigation as any).navigate('ReceiptDetail', { receiptId });
+                  setScanned(false);
+                  setQrText(null);
+                },
+              },
+            ]
+          );
         } else {
           Alert.alert(
             'Erro',
@@ -125,9 +183,14 @@ export const ScannerScreen = () => {
       }
     } finally {
       setLoading(false);
-      setScanned(false);
-      setQrText(null);
     }
+  };
+
+  const handleCloseProcessing = () => {
+    setShowProcessing(false);
+    setScanned(false);
+    setQrText(null);
+    (navigation as any).goBack();
   };
 
   const handleCancel = () => {
@@ -190,6 +253,12 @@ export const ScannerScreen = () => {
         qrText={qrText || ''}
         onConfirm={handleConfirm}
         onCancel={handleCancel}
+      />
+
+      <ProcessingModal
+        visible={showProcessing}
+        message={processingMessage}
+        onClose={handleCloseProcessing}
       />
     </View>
   );

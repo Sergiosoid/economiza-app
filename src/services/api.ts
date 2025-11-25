@@ -1,5 +1,11 @@
 import { getApi } from '../config/api';
 import { AxiosInstance } from 'axios';
+import { DEV_TOKEN } from '../config/settings';
+import {
+  ScanReceiptResponse,
+  ScanReceiptProcessingResponse,
+  ScanReceiptConflictResponse,
+} from '../types/api';
 
 const apiInstance: AxiosInstance = getApi();
 
@@ -26,3 +32,25 @@ export const api = {
     return response.data;
   },
 };
+
+/**
+ * Escaneia um QR code de nota fiscal
+ * @param qr_text Texto do QR code
+ * @returns Resposta do backend (pode ser ScanReceiptResponse, ScanReceiptProcessingResponse ou ScanReceiptConflictResponse)
+ */
+export async function scanReceipt(
+  qr_text: string
+): Promise<ScanReceiptResponse | ScanReceiptProcessingResponse | ScanReceiptConflictResponse> {
+  const response = await apiInstance.post<
+    ScanReceiptResponse | ScanReceiptProcessingResponse | ScanReceiptConflictResponse
+  >(
+    '/api/v1/receipts/scan',
+    { qr_text },
+    {
+      headers: {
+        Authorization: `Bearer ${DEV_TOKEN}`,
+      },
+    }
+  );
+  return response.data;
+}
