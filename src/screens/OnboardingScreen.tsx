@@ -195,6 +195,9 @@ const styles = StyleSheet.create({
     transition: 'all 0.3s',
   },
   buttons: {
+    width: '100%',
+  },
+  buttonRow: {
     flexDirection: 'row',
     gap: 12,
   },
