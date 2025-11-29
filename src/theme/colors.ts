@@ -1,76 +1,96 @@
 /**
- * Paleta de cores do app Economiza
- * Suporta modo claro e escuro
+ * Paleta de cores oficial do app Economiza
+ * Usa a mesma paleta para light e dark mode por enquanto
+ * 
+ * Guia de uso:
+ * - Botões: usar primary (#B9FF00)
+ * - Inputs: usar surface (#111111) + border (#1F1F1F)
+ * - Textos: usar textPrimary (#FFFFFF) ou textSecondary (#B3B3B3)
+ * - Headers: usar surface (#111111)
+ * - Background geral: usar background (#0A0A0A)
+ * 
+ * As transições de cores são suaves por padrão no React Native
  */
+
+const officialPalette = {
+  primary: '#B9FF00',
+  background: '#0A0A0A',
+  surface: '#111111',
+  textPrimary: '#FFFFFF',
+  textSecondary: '#B3B3B3',
+  border: '#1F1F1F',
+  error: '#FF4D4F',
+  success: '#65FF8F',
+};
 
 export const lightColors = {
   // Cores primárias
-  primary: '#4CAF50',
-  primaryDark: '#388E3C',
-  primaryLight: '#81C784',
+  primary: officialPalette.primary,
+  primaryDark: '#9ACC00',
+  primaryLight: '#D4FF33',
   
-  // Cores secundárias
-  secondary: '#81C784',
-  secondaryDark: '#66BB6A',
-  secondaryLight: '#A5D6A7',
+  // Cores secundárias (derivadas do primary)
+  secondary: officialPalette.primary,
+  secondaryDark: '#9ACC00',
+  secondaryLight: '#D4FF33',
   
   // Backgrounds
-  background: '#F5F5F5',
-  surface: '#FFFFFF',
-  surfaceVariant: '#F9F9F9',
+  background: officialPalette.background,
+  surface: officialPalette.surface,
+  surfaceVariant: '#1A1A1A',
   
   // Textos
-  textPrimary: '#212121',
-  textSecondary: '#757575',
-  textTertiary: '#9E9E9E',
-  textOnPrimary: '#FFFFFF',
+  textPrimary: officialPalette.textPrimary,
+  textSecondary: officialPalette.textSecondary,
+  textTertiary: '#808080',
+  textOnPrimary: officialPalette.background,
   
   // Estados
-  success: '#34C759',
-  warning: '#FF9500',
-  error: '#FF3B30',
-  info: '#007AFF',
+  success: officialPalette.success,
+  warning: '#FFB84D',
+  error: officialPalette.error,
+  info: '#4D9FFF',
   
   // Bordas e divisores
-  border: '#E0E0E0',
-  divider: '#E0E0E0',
+  border: officialPalette.border,
+  divider: officialPalette.border,
   
   // Overlay
-  overlay: 'rgba(0, 0, 0, 0.5)',
-  overlayLight: 'rgba(0, 0, 0, 0.3)',
+  overlay: 'rgba(0, 0, 0, 0.7)',
+  overlayLight: 'rgba(0, 0, 0, 0.5)',
 };
 
 export const darkColors = {
   // Cores primárias
-  primary: '#66BB6A',
-  primaryDark: '#4CAF50',
-  primaryLight: '#81C784',
+  primary: officialPalette.primary,
+  primaryDark: '#9ACC00',
+  primaryLight: '#D4FF33',
   
-  // Cores secundárias
-  secondary: '#81C784',
-  secondaryDark: '#66BB6A',
-  secondaryLight: '#A5D6A7',
+  // Cores secundárias (derivadas do primary)
+  secondary: officialPalette.primary,
+  secondaryDark: '#9ACC00',
+  secondaryLight: '#D4FF33',
   
   // Backgrounds
-  background: '#121212',
-  surface: '#1E1E1E',
-  surfaceVariant: '#2C2C2C',
+  background: officialPalette.background,
+  surface: officialPalette.surface,
+  surfaceVariant: '#1A1A1A',
   
   // Textos
-  textPrimary: '#FFFFFF',
-  textSecondary: '#B0B0B0',
-  textTertiary: '#757575',
-  textOnPrimary: '#FFFFFF',
+  textPrimary: officialPalette.textPrimary,
+  textSecondary: officialPalette.textSecondary,
+  textTertiary: '#808080',
+  textOnPrimary: officialPalette.background,
   
   // Estados
-  success: '#34C759',
-  warning: '#FF9500',
-  error: '#FF3B30',
-  info: '#007AFF',
+  success: officialPalette.success,
+  warning: '#FFB84D',
+  error: officialPalette.error,
+  info: '#4D9FFF',
   
   // Bordas e divisores
-  border: '#333333',
-  divider: '#333333',
+  border: officialPalette.border,
+  divider: officialPalette.border,
   
   // Overlay
   overlay: 'rgba(0, 0, 0, 0.7)',
@@ -79,4 +99,3 @@ export const darkColors = {
 
 export type ColorScheme = 'light' | 'dark';
 export type Colors = typeof lightColors;
-

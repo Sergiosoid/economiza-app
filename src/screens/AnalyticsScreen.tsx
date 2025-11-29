@@ -7,10 +7,14 @@ import {
   ActivityIndicator,
   RefreshControl,
 } from 'react-native';
+import { useTheme } from '../theme/ThemeContext';
 import { getMonthlySummary } from '../services/api';
 import { MonthlySummaryResponse } from '../types/api';
+import { formatCurrency, formatMonth } from '../utils/formatters';
+import { AppBar } from '../components/AppBar';
 
-export const AnalyticsScreen = () => {
+const AnalyticsScreen = () => {
+  const { colors } = useTheme();
   const [summary, setSummary] = useState<MonthlySummaryResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -40,27 +44,15 @@ export const AnalyticsScreen = () => {
     loadSummary();
   };
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL',
-    }).format(value);
-  };
-
-  const formatMonth = (monthStr: string) => {
-    const [year, month] = monthStr.split('-');
-    const monthNames = [
-      'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
-      'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
-    ];
-    return `${monthNames[parseInt(month) - 1]} ${year}`;
-  };
 
   if (loading) {
     return (
-      <View style={styles.container}>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#007AFF" />
+      <View style={{ flex: 1 }}>
+        <AppBar title="ANALYTICS" />
+        <View style={[styles.container, { backgroundColor: colors.background }]}>
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size={40} color={colors.primary} />
+          </View>
         </View>
       </View>
     );
@@ -68,8 +60,11 @@ export const AnalyticsScreen = () => {
 
   if (!summary) {
     return (
-      <View style={styles.container}>
-        <Text style={styles.errorText}>Erro ao carregar dados</Text>
+      <View style={{ flex: 1 }}>
+        <AppBar title="ANALYTICS" />
+        <View style={[styles.container, { backgroundColor: colors.background }]}>
+          <Text style={[styles.errorText, { color: colors.textSecondary }]}>Erro ao carregar dados</Text>
+        </View>
       </View>
     );
   }
@@ -80,36 +75,41 @@ export const AnalyticsScreen = () => {
   ) * 0.1; // Estimativa de 10% de impostos
 
   return (
-    <ScrollView
-      style={styles.container}
-      refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
-      }
-    >
-      <View style={styles.header}>
-        <Text style={styles.title}>Resumo Mensal</Text>
-        <Text style={styles.subtitle}>{formatMonth(summary.month)}</Text>
+    <View style={{ flex: 1 }}>
+      <AppBar title="ANALYTICS" />
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={{
+          paddingBottom: 120,
+        }}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
+        }
+      >
+      <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
+        <Text style={[styles.title, { color: colors.textPrimary }]}>Resumo Mensal</Text>
+        <Text style={[styles.subtitle, { color: colors.textSecondary }]}>{formatMonth(summary.month)}</Text>
       </View>
 
       {/* Card Principal - Totais */}
-      <View style={styles.mainCard}>
+      <View style={[styles.mainCard, { backgroundColor: colors.surface }]}>
         <View style={styles.totalRow}>
-          <Text style={styles.totalLabel}>Total Gasto</Text>
-          <Text style={styles.totalValue}>
+          <Text style={[styles.totalLabel, { color: colors.textSecondary }]}>Total Gasto</Text>
+          <Text style={[styles.totalValue, { color: colors.primary }]}>
             {formatCurrency(summary.total_mes)}
           </Text>
         </View>
-        <View style={styles.divider} />
+        <View style={[styles.divider, { backgroundColor: colors.border }]} />
         <View style={styles.statsRow}>
           <View style={styles.statItem}>
-            <Text style={styles.statLabel}>Impostos</Text>
-            <Text style={styles.statValue}>
+            <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Impostos</Text>
+            <Text style={[styles.statValue, { color: colors.textPrimary }]}>
               {formatCurrency(summary.total_mes * 0.1)}
             </Text>
           </View>
           <View style={styles.statItem}>
-            <Text style={styles.statLabel}>Compras</Text>
-            <Text style={styles.statValue}>
+            <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Compras</Text>
+            <Text style={[styles.statValue, { color: colors.textPrimary }]}>
               {summary.top_10_itens.reduce((acc, item) => acc + item.purchase_count, 0)}
             </Text>
           </View>
@@ -118,14 +118,12 @@ export const AnalyticsScreen = () => {
 
       {/* Card de Variação */}
       {summary.variacao_vs_mes_anterior !== 0 && (
-        <View style={styles.variationCard}>
-          <Text style={styles.variationLabel}>Variação vs Mês Anterior</Text>
+        <View style={[styles.variationCard, { backgroundColor: colors.surface }]}>
+          <Text style={[styles.variationLabel, { color: colors.textSecondary }]}>Variação vs Mês Anterior</Text>
           <Text
             style={[
               styles.variationValue,
-              summary.variacao_vs_mes_anterior > 0
-                ? styles.variationPositive
-                : styles.variationNegative,
+              { color: summary.variacao_vs_mes_anterior > 0 ? colors.success : colors.error },
             ]}
           >
             {summary.variacao_vs_mes_anterior > 0 ? '+' : ''}
@@ -135,24 +133,24 @@ export const AnalyticsScreen = () => {
       )}
 
       {/* Card de Economia Estimada (Placeholder) */}
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>Economia Estimada</Text>
-        <Text style={styles.economyValue}>
+      <View style={[styles.card, { backgroundColor: colors.surface }]}>
+        <Text style={[styles.cardTitle, { color: colors.textPrimary }]}>Economia Estimada</Text>
+        <Text style={[styles.economyValue, { color: colors.success }]}>
           {formatCurrency(summary.total_mes * 0.05)}
         </Text>
-        <Text style={styles.economyNote}>
+        <Text style={[styles.economyNote, { color: colors.textSecondary }]}>
           Baseado em comparações de preços
         </Text>
       </View>
 
       {/* Card de Categorias */}
       {Object.keys(summary.total_por_categoria).length > 0 && (
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Gastos por Categoria</Text>
+        <View style={[styles.card, { backgroundColor: colors.surface }]}>
+          <Text style={[styles.cardTitle, { color: colors.textPrimary }]}>Gastos por Categoria</Text>
           {Object.entries(summary.total_por_categoria).map(([category, total]) => (
-            <View key={category} style={styles.categoryRow}>
-              <Text style={styles.categoryName}>{category}</Text>
-              <Text style={styles.categoryValue}>{formatCurrency(total)}</Text>
+            <View key={category} style={[styles.categoryRow, { borderBottomColor: colors.border }]}>
+              <Text style={[styles.categoryName, { color: colors.textPrimary }]}>{category}</Text>
+              <Text style={[styles.categoryValue, { color: colors.textPrimary }]}>{formatCurrency(total)}</Text>
             </View>
           ))}
         </View>
@@ -160,17 +158,17 @@ export const AnalyticsScreen = () => {
 
       {/* Card de Top Itens */}
       {summary.top_10_itens.length > 0 && (
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Top 10 Itens</Text>
+        <View style={[styles.card, { backgroundColor: colors.surface }]}>
+          <Text style={[styles.cardTitle, { color: colors.textPrimary }]}>Top 10 Itens</Text>
           {summary.top_10_itens.map((item, index) => (
-            <View key={index} style={styles.itemRow}>
+            <View key={index} style={[styles.itemRow, { borderBottomColor: colors.border }]}>
               <View style={styles.itemInfo}>
-                <Text style={styles.itemName}>{item.description}</Text>
-                <Text style={styles.itemDetails}>
+                <Text style={[styles.itemName, { color: colors.textPrimary }]}>{item.description}</Text>
+                <Text style={[styles.itemDetails, { color: colors.textSecondary }]}>
                   {item.total_quantity.toFixed(2)} unidades • {item.purchase_count} compras
                 </Text>
               </View>
-              <Text style={styles.itemTotal}>
+              <Text style={[styles.itemTotal, { color: colors.textPrimary }]}>
                 {formatCurrency(item.total_spent)}
               </Text>
             </View>
@@ -179,22 +177,22 @@ export const AnalyticsScreen = () => {
       )}
 
       {/* Placeholder para Gráfico */}
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>Gráfico de Gastos</Text>
-        <View style={styles.chartPlaceholder}>
-          <Text style={styles.chartPlaceholderText}>
+      <View style={[styles.card, { backgroundColor: colors.surface }]}>
+        <Text style={[styles.cardTitle, { color: colors.textPrimary }]}>Gráfico de Gastos</Text>
+        <View style={[styles.chartPlaceholder, { backgroundColor: colors.background }]}>
+          <Text style={[styles.chartPlaceholderText, { color: colors.textSecondary }]}>
             Gráfico será implementado com VictoryNative
           </Text>
         </View>
       </View>
     </ScrollView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
   },
   loadingContainer: {
     flex: 1,
@@ -202,23 +200,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   header: {
-    backgroundColor: '#fff',
     padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
   },
   title: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#333',
     marginBottom: 4,
   },
   subtitle: {
     fontSize: 16,
-    color: '#666',
   },
   mainCard: {
-    backgroundColor: '#fff',
     margin: 16,
     padding: 20,
     borderRadius: 12,
@@ -234,17 +227,14 @@ const styles = StyleSheet.create({
   },
   totalLabel: {
     fontSize: 14,
-    color: '#666',
     marginBottom: 8,
   },
   totalValue: {
     fontSize: 36,
     fontWeight: 'bold',
-    color: '#007AFF',
   },
   divider: {
     height: 1,
-    backgroundColor: '#e0e0e0',
     marginVertical: 16,
   },
   statsRow: {
@@ -256,16 +246,13 @@ const styles = StyleSheet.create({
   },
   statLabel: {
     fontSize: 12,
-    color: '#666',
     marginBottom: 4,
   },
   statValue: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#333',
   },
   variationCard: {
-    backgroundColor: '#fff',
     marginHorizontal: 16,
     marginBottom: 16,
     padding: 16,
@@ -281,20 +268,12 @@ const styles = StyleSheet.create({
   },
   variationLabel: {
     fontSize: 14,
-    color: '#666',
   },
   variationValue: {
     fontSize: 20,
     fontWeight: 'bold',
   },
-  variationPositive: {
-    color: '#34C759',
-  },
-  variationNegative: {
-    color: '#FF3B30',
-  },
   card: {
-    backgroundColor: '#fff',
     marginHorizontal: 16,
     marginBottom: 16,
     padding: 20,
@@ -308,41 +287,34 @@ const styles = StyleSheet.create({
   cardTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#333',
     marginBottom: 16,
   },
   economyValue: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#34C759',
     marginBottom: 8,
   },
   economyNote: {
     fontSize: 12,
-    color: '#999',
   },
   categoryRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
   },
   categoryName: {
     fontSize: 16,
-    color: '#333',
   },
   categoryValue: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#000',
   },
   itemRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
   },
   itemInfo: {
     flex: 1,
@@ -351,21 +323,17 @@ const styles = StyleSheet.create({
   itemName: {
     fontSize: 16,
     fontWeight: '500',
-    color: '#333',
     marginBottom: 4,
   },
   itemDetails: {
     fontSize: 12,
-    color: '#666',
   },
   itemTotal: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#000',
   },
   chartPlaceholder: {
     height: 200,
-    backgroundColor: '#f9f9f9',
     borderRadius: 8,
     justifyContent: 'center',
     alignItems: 'center',
@@ -373,14 +341,14 @@ const styles = StyleSheet.create({
   },
   chartPlaceholderText: {
     fontSize: 14,
-    color: '#999',
     textAlign: 'center',
   },
   errorText: {
     fontSize: 16,
-    color: '#999',
     textAlign: 'center',
     marginTop: 50,
   },
 });
+
+export default AnalyticsScreen;
 

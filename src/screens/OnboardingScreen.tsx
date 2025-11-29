@@ -7,11 +7,11 @@ import {
   Image,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { ScreenContainer } from '../components/ScreenContainer';
-import { Button } from '../components/Button';
-import { Typography } from '../components/Typography';
+import { ScreenContainer, Button, Typography } from '../components';
 import { useTheme } from '../theme/ThemeContext';
+import type { RootStackParamList } from '../navigation/types';
 
 const { width } = Dimensions.get('window');
 
@@ -40,7 +40,7 @@ const slides = [
 
 export const OnboardingScreen = () => {
   const [currentSlide, setCurrentSlide] = useState(0);
-  const navigation = useNavigation();
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { colors } = useTheme();
 
   const handleNext = () => {
@@ -58,10 +58,16 @@ export const OnboardingScreen = () => {
   const handleFinish = async () => {
     try {
       await AsyncStorage.setItem(ONBOARDING_STORAGE_KEY, 'true');
-      navigation.navigate('Home' as never);
+      navigation.reset({
+        index: 0,
+        routes: [{ name: 'BottomTabs' as never }],
+      });
     } catch (error) {
       console.error('Erro ao salvar onboarding:', error);
-      navigation.navigate('Home' as never);
+      navigation.reset({
+        index: 0,
+        routes: [{ name: 'BottomTabs' as never }],
+      });
     }
   };
 
@@ -192,7 +198,6 @@ const styles = StyleSheet.create({
   indicator: {
     height: 8,
     borderRadius: 4,
-    transition: 'all 0.3s',
   },
   buttons: {
     width: '100%',

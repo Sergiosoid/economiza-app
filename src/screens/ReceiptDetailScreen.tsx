@@ -6,19 +6,30 @@ import {
   ScrollView,
   ActivityIndicator,
   Alert,
+  TouchableOpacity,
 } from 'react-native';
-import { useRoute, RouteProp } from '@react-navigation/native';
-import { getApi } from '../config/api';
-import { DEV_TOKEN } from '../config/settings';
+import { useRoute, RouteProp, useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useTheme } from '../theme/ThemeContext';
+import { getReceiptDetail } from '../services/api';
 import { ReceiptDetailResponse } from '../types/api';
+import { formatCurrency, formatDate } from '../utils/formatters';
+import type { RootStackParamList } from '../navigation/types';
 
 type ReceiptDetailRouteProp = RouteProp<{ ReceiptDetail: { receiptId: string } }, 'ReceiptDetail'>;
+type ReceiptDetailNavigationProp = NativeStackNavigationProp<RootStackParamList, 'ReceiptDetail'>;
 
 export const ReceiptDetailScreen = () => {
+  const { colors } = useTheme();
   const route = useRoute<ReceiptDetailRouteProp>();
+  const navigation = useNavigation<ReceiptDetailNavigationProp>();
   const { receiptId } = route.params;
   const [receipt, setReceipt] = useState<ReceiptDetailResponse | null>(null);
   const [loading, setLoading] = useState(true);
+
+  const handleOpenEmpacotador = () => {
+    navigation.navigate('Empacotador', { receiptId });
+  };
 
   useEffect(() => {
     loadReceipt();
@@ -26,21 +37,13 @@ export const ReceiptDetailScreen = () => {
 
   const loadReceipt = async () => {
     try {
-      const apiInstance = getApi();
-      const response = await apiInstance.get<ReceiptDetailResponse>(
-        `/api/v1/receipts/${receiptId}`,
-        {
-          headers: {
-            Authorization: `Bearer ${DEV_TOKEN}`,
-          },
-        }
-      );
-      setReceipt(response.data);
+      const receiptData = await getReceiptDetail(receiptId);
+      setReceipt(receiptData);
     } catch (error: any) {
       console.error('Erro ao carregar receipt:', error);
       Alert.alert(
         'Erro',
-        'Não foi possível carregar os detalhes da nota fiscal.',
+        error?.response?.data?.detail || 'Não foi possível carregar os detalhes da nota fiscal.',
         [{ text: 'OK' }]
       );
     } finally {
@@ -50,123 +53,131 @@ export const ReceiptDetailScreen = () => {
 
   if (loading) {
     return (
-      <View style={styles.container}>
-        <ActivityIndicator size="large" />
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <ActivityIndicator size={40} color={colors.primary} />
       </View>
     );
   }
 
   if (!receipt) {
     return (
-      <View style={styles.container}>
-        <Text style={styles.errorText}>Nota fiscal não encontrada</Text>
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <Text style={[styles.errorText, { color: colors.textSecondary }]}>Nota fiscal não encontrada</Text>
       </View>
     );
   }
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL',
-    }).format(value);
-  };
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('pt-BR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  };
 
   return (
-    <ScrollView style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={{
+          padding: 16,
+          paddingBottom: 90,
+        }}
+      >
       {/* Card Principal - Supermercado e Totais */}
-      <View style={styles.mainCard}>
-        <View style={styles.storeHeader}>
-          <Text style={styles.storeName}>
+      <View style={[styles.mainCard, { backgroundColor: colors.surface }]}>
+        <View style={[styles.storeHeader, { borderBottomColor: colors.border }]}>
+          <Text style={[styles.storeName, { color: colors.textPrimary }]}>
             {receipt.store_name || 'Loja não identificada'}
           </Text>
           {receipt.store_cnpj && (
-            <Text style={styles.cnpj}>CNPJ: {receipt.store_cnpj}</Text>
+            <Text style={[styles.cnpj, { color: colors.textSecondary }]}>CNPJ: {receipt.store_cnpj}</Text>
           )}
         </View>
         
         <View style={styles.totalSection}>
           <View style={styles.totalRow}>
-            <Text style={styles.totalLabel}>Total:</Text>
-            <Text style={styles.totalValue}>
-              {formatCurrency(receipt.total_value)}
+            <Text style={[styles.totalLabel, { color: colors.textPrimary }]}>Subtotal:</Text>
+            <Text style={[styles.subtotalValue, { color: colors.textPrimary }]}>
+              {formatCurrency(receipt.subtotal)}
             </Text>
           </View>
           <View style={styles.totalRow}>
-            <Text style={styles.taxLabel}>Impostos:</Text>
-            <Text style={styles.taxValue}>
+            <Text style={[styles.taxLabel, { color: colors.textSecondary }]}>Impostos:</Text>
+            <Text style={[styles.taxValue, { color: colors.warning }]}>
               {formatCurrency(receipt.total_tax)}
+            </Text>
+          </View>
+          <View style={[styles.totalRow, styles.totalRowFinal, { borderTopColor: colors.border }]}>
+            <Text style={[styles.totalLabel, { color: colors.textPrimary }]}>Total:</Text>
+            <Text style={[styles.totalValue, { color: colors.primary }]}>
+              {formatCurrency(receipt.total_value)}
             </Text>
           </View>
         </View>
 
-        <View style={styles.dateSection}>
-          <Text style={styles.dateLabel}>Data e Hora:</Text>
-          <Text style={styles.dateValue}>{formatDate(receipt.emitted_at)}</Text>
+        <View style={[styles.dateSection, { borderTopColor: colors.border }]}>
+          <Text style={[styles.dateLabel, { color: colors.textSecondary }]}>Data e Hora:</Text>
+          <Text style={[styles.dateValue, { color: colors.textPrimary }]}>{formatDate(receipt.emitted_at, true)}</Text>
         </View>
       </View>
 
       {/* Card de Informações */}
-      <View style={styles.infoCard}>
-        <Text style={styles.sectionTitle}>Informações</Text>
+      <View style={[styles.infoCard, { backgroundColor: colors.surface }]}>
+        <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Informações</Text>
         <View style={styles.infoRow}>
-          <Text style={styles.infoLabel}>Chave de Acesso:</Text>
-          <Text style={styles.infoValue}>{receipt.access_key}</Text>
+          <Text style={[styles.infoLabel, { color: colors.textSecondary }]}>Chave de Acesso:</Text>
+          <Text style={[styles.infoValue, { color: colors.textPrimary }]}>{receipt.access_key}</Text>
         </View>
         <View style={styles.infoRow}>
-          <Text style={styles.infoLabel}>Data de Cadastro:</Text>
-          <Text style={styles.infoValue}>{formatDate(receipt.created_at)}</Text>
+          <Text style={[styles.infoLabel, { color: colors.textSecondary }]}>Data de Cadastro:</Text>
+          <Text style={[styles.infoValue, { color: colors.textPrimary }]}>{formatDate(receipt.created_at, true)}</Text>
         </View>
       </View>
 
+      {/* Botão Modo Empacotador (Interno) */}
+      <View style={styles.empacotadorCard}>
+        <TouchableOpacity 
+          style={[styles.empacotadorButton, { backgroundColor: colors.primary }]}
+          onPress={handleOpenEmpacotador}
+        >
+          <Text style={[styles.empacotadorButtonText, { color: colors.textOnPrimary }]}>📦 Modo Empacotador</Text>
+          <Text style={[styles.empacotadorButtonSubtext, { color: colors.textOnPrimary }]}>Corrigir classificação dos itens</Text>
+        </TouchableOpacity>
+      </View>
+
       {/* Card de Itens */}
-      <View style={styles.itemsCard}>
-        <Text style={styles.sectionTitle}>Itens ({receipt.items.length})</Text>
+      <View style={[styles.itemsCard, { backgroundColor: colors.surface }]}>
+        <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Itens ({receipt.items.length})</Text>
         {receipt.items.map((item, index) => (
           <View
             key={item.id}
             style={[
               styles.item,
+              { borderBottomColor: colors.border },
               index === receipt.items.length - 1 && styles.itemLast,
             ]}
           >
-            <Text style={styles.itemDescription}>{item.description}</Text>
+            <Text style={[styles.itemDescription, { color: colors.textPrimary }]}>{item.description}</Text>
             <View style={styles.itemDetails}>
-              <Text style={styles.itemQuantity}>
+              <Text style={[styles.itemQuantity, { color: colors.textSecondary }]}>
                 {item.quantity} x {formatCurrency(item.unit_price)}
               </Text>
-              <Text style={styles.itemTotal}>
+              <Text style={[styles.itemTotal, { color: colors.textPrimary }]}>
                 {formatCurrency(item.total_price)}
               </Text>
             </View>
             {item.tax_value > 0 && (
-              <Text style={styles.itemTax}>
+              <Text style={[styles.itemTax, { color: colors.textSecondary }]}>
                 Impostos: {formatCurrency(item.tax_value)}
               </Text>
             )}
           </View>
         ))}
       </View>
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
   },
   mainCard: {
-    backgroundColor: '#fff',
     margin: 16,
     padding: 20,
     borderRadius: 12,
@@ -180,17 +191,14 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     paddingBottom: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
   },
   storeName: {
     fontSize: 22,
     fontWeight: 'bold',
-    color: '#333',
     marginBottom: 6,
   },
   cnpj: {
     fontSize: 14,
-    color: '#666',
   },
   totalSection: {
     marginBottom: 16,
@@ -204,39 +212,40 @@ const styles = StyleSheet.create({
   totalLabel: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#333',
+  },
+  subtotalValue: {
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  totalRowFinal: {
+    marginTop: 8,
+    paddingTop: 8,
+    borderTopWidth: 1,
   },
   totalValue: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#007AFF',
   },
   taxLabel: {
     fontSize: 14,
-    color: '#666',
   },
   taxValue: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#856404',
   },
   dateSection: {
     paddingTop: 16,
     borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
   },
   dateLabel: {
     fontSize: 12,
-    color: '#999',
     marginBottom: 4,
   },
   dateValue: {
     fontSize: 16,
-    color: '#333',
     fontWeight: '500',
   },
   infoCard: {
-    backgroundColor: '#fff',
     marginHorizontal: 16,
     marginBottom: 16,
     padding: 20,
@@ -251,7 +260,6 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
     marginBottom: 16,
-    color: '#333',
   },
   infoRow: {
     flexDirection: 'row',
@@ -260,18 +268,15 @@ const styles = StyleSheet.create({
   },
   infoLabel: {
     fontSize: 14,
-    color: '#666',
     flex: 1,
   },
   infoValue: {
     fontSize: 14,
-    color: '#000',
     flex: 2,
     textAlign: 'right',
     fontWeight: '500',
   },
   itemsCard: {
-    backgroundColor: '#fff',
     marginHorizontal: 16,
     marginBottom: 16,
     padding: 20,
@@ -285,7 +290,6 @@ const styles = StyleSheet.create({
   item: {
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
   },
   itemLast: {
     borderBottomWidth: 0,
@@ -294,7 +298,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '500',
     marginBottom: 8,
-    color: '#333',
   },
   itemDetails: {
     flexDirection: 'row',
@@ -304,23 +307,42 @@ const styles = StyleSheet.create({
   },
   itemQuantity: {
     fontSize: 14,
-    color: '#666',
   },
   itemTotal: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#000',
   },
   itemTax: {
     fontSize: 12,
-    color: '#999',
     marginTop: 4,
   },
   errorText: {
     fontSize: 16,
-    color: '#999',
     textAlign: 'center',
     marginTop: 50,
+  },
+  empacotadorCard: {
+    margin: 16,
+    marginTop: 0,
+  },
+  empacotadorButton: {
+    padding: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  empacotadorButtonText: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  empacotadorButtonSubtext: {
+    fontSize: 14,
+    opacity: 0.9,
   },
 });
 

@@ -7,4 +7,6 @@ export { ScreenContainer } from './ScreenContainer';
 export { Typography } from './Typography';
 export { Divider } from './Divider';
 export { Loading } from './Loading';
+export { default as ConfirmationModal } from './ConfirmationModal';
+export { default as ProcessingModal } from './ProcessingModal';
 

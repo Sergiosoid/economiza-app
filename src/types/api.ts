@@ -53,9 +53,11 @@ export interface ReceiptListItem {
   store_name: string | null;
   store_cnpj: string | null;
   total_value: number;
+  subtotal: number;
   total_tax: number;
   emitted_at: string | null;
   created_at: string | null;
+  items: ReceiptItemResponse[];
 }
 
 export interface ReceiptListResponse {

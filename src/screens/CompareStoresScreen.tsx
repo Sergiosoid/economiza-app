@@ -9,10 +9,13 @@ import {
   TouchableOpacity,
   Alert,
 } from 'react-native';
+import { useTheme } from '../theme/ThemeContext';
 import { getStoreComparison } from '../services/api';
 import { StoreComparisonResponse } from '../types/api';
+import { formatCurrency } from '../utils/formatters';
 
 export const CompareStoresScreen = () => {
+  const { colors } = useTheme();
   const [productId, setProductId] = useState('');
   const [comparison, setComparison] = useState<StoreComparisonResponse | null>(null);
   const [loading, setLoading] = useState(false);
@@ -39,40 +42,40 @@ export const CompareStoresScreen = () => {
     }
   };
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL',
-    }).format(value);
-  };
-
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Comparar Preços</Text>
-        <Text style={styles.subtitle}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={{
+          padding: 16,
+          paddingBottom: 90,
+        }}
+      >
+      <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
+        <Text style={[styles.title, { color: colors.textPrimary }]}>Comparar Preços</Text>
+        <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
           Compare preços de um produto em diferentes supermercados
         </Text>
       </View>
 
-      <View style={styles.searchCard}>
-        <Text style={styles.searchLabel}>ID do Produto</Text>
+      <View style={[styles.searchCard, { backgroundColor: colors.surface }]}>
+        <Text style={[styles.searchLabel, { color: colors.textPrimary }]}>ID do Produto</Text>
         <TextInput
-          style={styles.input}
+          style={[styles.input, { backgroundColor: colors.background, borderColor: colors.border, color: colors.textPrimary }]}
           value={productId}
           onChangeText={setProductId}
           placeholder="Digite o ID do produto"
-          placeholderTextColor="#999"
+          placeholderTextColor={colors.textSecondary}
         />
         <TouchableOpacity
-          style={[styles.searchButton, loading && styles.buttonDisabled]}
+          style={[styles.searchButton, { backgroundColor: colors.primary }, loading && styles.buttonDisabled]}
           onPress={handleCompare}
           disabled={loading}
         >
           {loading ? (
-            <ActivityIndicator color="#fff" />
+            <ActivityIndicator color={colors.textOnPrimary} />
           ) : (
-            <Text style={styles.searchButtonText}>Comparar</Text>
+            <Text style={[styles.searchButtonText, { color: colors.textOnPrimary }]}>Comparar</Text>
           )}
         </TouchableOpacity>
       </View>
@@ -80,17 +83,17 @@ export const CompareStoresScreen = () => {
       {comparison && (
         <>
           {/* Card Principal - Produto e Menor Preço */}
-          <View style={styles.mainCard}>
-            <Text style={styles.productName}>{comparison.product_name}</Text>
+          <View style={[styles.mainCard, { backgroundColor: colors.surface }]}>
+            <Text style={[styles.productName, { color: colors.textPrimary }]}>{comparison.product_name}</Text>
             {comparison.menor_preco_encontrado !== null && (
               <>
-                <View style={styles.bestPriceSection}>
-                  <Text style={styles.bestPriceLabel}>Menor Preço Encontrado</Text>
-                  <Text style={styles.bestPriceValue}>
+                <View style={[styles.bestPriceSection, { borderTopColor: colors.border }]}>
+                  <Text style={[styles.bestPriceLabel, { color: colors.textSecondary }]}>Menor Preço Encontrado</Text>
+                  <Text style={[styles.bestPriceValue, { color: colors.success }]}>
                     {formatCurrency(comparison.menor_preco_encontrado)}
                   </Text>
                   {comparison.loja_menor_preco && (
-                    <Text style={styles.bestPriceStore}>
+                    <Text style={[styles.bestPriceStore, { color: colors.textSecondary }]}>
                       em {comparison.loja_menor_preco}
                     </Text>
                   )}
@@ -101,8 +104,8 @@ export const CompareStoresScreen = () => {
 
           {/* Lista de Supermercados */}
           {comparison.preco_medio_por_supermercado.length > 0 ? (
-            <View style={styles.storesCard}>
-              <Text style={styles.cardTitle}>
+            <View style={[styles.storesCard, { backgroundColor: colors.surface }]}>
+              <Text style={[styles.cardTitle, { color: colors.textPrimary }]}>
                 Preços por Supermercado ({comparison.total_comparacoes})
               </Text>
               {comparison.preco_medio_por_supermercado.map((store, index) => (
@@ -110,20 +113,21 @@ export const CompareStoresScreen = () => {
                   key={index}
                   style={[
                     styles.storeRow,
+                    { borderBottomColor: colors.border },
                     index === comparison.preco_medio_por_supermercado.length - 1 &&
                       styles.storeRowLast,
                   ]}
                 >
                   <View style={styles.storeInfo}>
-                    <Text style={styles.storeName}>{store.store_name}</Text>
-                    <Text style={styles.storeDetails}>
+                    <Text style={[styles.storeName, { color: colors.textPrimary }]}>{store.store_name}</Text>
+                    <Text style={[styles.storeDetails, { color: colors.textSecondary }]}>
                       {store.purchase_count} compras • Mín: {formatCurrency(store.min_price)} • Máx:{' '}
                       {formatCurrency(store.max_price)}
                     </Text>
                   </View>
                   <View style={styles.storePrice}>
-                    <Text style={styles.storePriceLabel}>Média</Text>
-                    <Text style={styles.storePriceValue}>
+                    <Text style={[styles.storePriceLabel, { color: colors.textSecondary }]}>Média</Text>
+                    <Text style={[styles.storePriceValue, { color: colors.primary }]}>
                       {formatCurrency(store.avg_price)}
                     </Text>
                   </View>
@@ -131,8 +135,8 @@ export const CompareStoresScreen = () => {
               ))}
             </View>
           ) : (
-            <View style={styles.emptyCard}>
-              <Text style={styles.emptyText}>
+            <View style={[styles.emptyCard, { backgroundColor: colors.surface }]}>
+              <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
                 Nenhuma comparação disponível para este produto
               </Text>
             </View>
@@ -141,15 +145,15 @@ export const CompareStoresScreen = () => {
           {/* Card de Economia Estimada */}
           {comparison.preco_medio_por_supermercado.length > 1 &&
             comparison.menor_preco_encontrado !== null && (
-              <View style={styles.economyCard}>
-                <Text style={styles.economyTitle}>Economia Estimada</Text>
-                <Text style={styles.economyValue}>
+              <View style={[styles.economyCard, { backgroundColor: colors.surface }]}>
+                <Text style={[styles.economyTitle, { color: colors.textSecondary }]}>Economia Estimada</Text>
+                <Text style={[styles.economyValue, { color: colors.success }]}>
                   {formatCurrency(
                     (comparison.preco_medio_por_supermercado[0]?.avg_price || 0) -
                       (comparison.menor_preco_encontrado || 0)
                   )}
                 </Text>
-                <Text style={styles.economyNote}>
+                <Text style={[styles.economyNote, { color: colors.textSecondary }]}>
                   Diferença entre maior e menor preço médio
                 </Text>
               </View>
@@ -158,40 +162,35 @@ export const CompareStoresScreen = () => {
       )}
 
       {!comparison && !loading && (
-        <View style={styles.placeholderCard}>
-          <Text style={styles.placeholderText}>
+        <View style={[styles.placeholderCard, { backgroundColor: colors.surface }]}>
+          <Text style={[styles.placeholderText, { color: colors.textSecondary }]}>
             Digite o ID de um produto e clique em "Comparar" para ver os preços em diferentes
             supermercados
           </Text>
         </View>
       )}
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
   },
   header: {
-    backgroundColor: '#fff',
     padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
   },
   title: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#333',
     marginBottom: 4,
   },
   subtitle: {
     fontSize: 14,
-    color: '#666',
   },
   searchCard: {
-    backgroundColor: '#fff',
     margin: 16,
     padding: 20,
     borderRadius: 12,
@@ -204,20 +203,16 @@ const styles = StyleSheet.create({
   searchLabel: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#333',
     marginBottom: 8,
   },
   input: {
     borderWidth: 1,
-    borderColor: '#e0e0e0',
     borderRadius: 8,
     padding: 12,
     fontSize: 16,
     marginBottom: 16,
-    backgroundColor: '#f9f9f9',
   },
   searchButton: {
-    backgroundColor: '#007AFF',
     paddingVertical: 14,
     borderRadius: 8,
     alignItems: 'center',
@@ -226,12 +221,10 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   searchButtonText: {
-    color: '#fff',
     fontSize: 16,
     fontWeight: '600',
   },
   mainCard: {
-    backgroundColor: '#fff',
     marginHorizontal: 16,
     marginBottom: 16,
     padding: 20,
@@ -245,32 +238,26 @@ const styles = StyleSheet.create({
   productName: {
     fontSize: 22,
     fontWeight: 'bold',
-    color: '#333',
     marginBottom: 20,
   },
   bestPriceSection: {
     alignItems: 'center',
     paddingTop: 16,
     borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
   },
   bestPriceLabel: {
     fontSize: 14,
-    color: '#666',
     marginBottom: 8,
   },
   bestPriceValue: {
     fontSize: 32,
     fontWeight: 'bold',
-    color: '#34C759',
     marginBottom: 4,
   },
   bestPriceStore: {
     fontSize: 14,
-    color: '#666',
   },
   storesCard: {
-    backgroundColor: '#fff',
     marginHorizontal: 16,
     marginBottom: 16,
     padding: 20,
@@ -284,7 +271,6 @@ const styles = StyleSheet.create({
   cardTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#333',
     marginBottom: 16,
   },
   storeRow: {
@@ -292,7 +278,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
   },
   storeRowLast: {
     borderBottomWidth: 0,
@@ -304,28 +289,23 @@ const styles = StyleSheet.create({
   storeName: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#333',
     marginBottom: 4,
   },
   storeDetails: {
     fontSize: 12,
-    color: '#666',
   },
   storePrice: {
     alignItems: 'flex-end',
   },
   storePriceLabel: {
     fontSize: 12,
-    color: '#666',
     marginBottom: 4,
   },
   storePriceValue: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#007AFF',
   },
   economyCard: {
-    backgroundColor: '#fff',
     marginHorizontal: 16,
     marginBottom: 16,
     padding: 20,
@@ -339,21 +319,17 @@ const styles = StyleSheet.create({
   },
   economyTitle: {
     fontSize: 16,
-    color: '#666',
     marginBottom: 8,
   },
   economyValue: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#34C759',
     marginBottom: 4,
   },
   economyNote: {
     fontSize: 12,
-    color: '#999',
   },
   emptyCard: {
-    backgroundColor: '#fff',
     marginHorizontal: 16,
     marginBottom: 16,
     padding: 40,
@@ -362,11 +338,9 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 14,
-    color: '#999',
     textAlign: 'center',
   },
   placeholderCard: {
-    backgroundColor: '#fff',
     margin: 16,
     padding: 40,
     borderRadius: 12,
@@ -374,7 +348,6 @@ const styles = StyleSheet.create({
   },
   placeholderText: {
     fontSize: 14,
-    color: '#999',
     textAlign: 'center',
     lineHeight: 20,
   },

@@ -18,7 +18,8 @@ interface ThemeProviderProps {
 }
 
 export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
-  const [colorScheme, setColorScheme] = useState<ColorScheme>('light');
+  // Usa 'dark' como padrão já que a paleta oficial é escura
+  const [colorScheme, setColorScheme] = useState<ColorScheme>('dark');
 
   useEffect(() => {
     // Carregar tema salvo

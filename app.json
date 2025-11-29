@@ -1,36 +1,65 @@
 {
   "expo": {
-    "name": "economiza-app",
-    "slug": "economiza-app",
+    "name": "Economiza",
+    "slug": "economiza",
     "version": "1.0.0",
     "orientation": "portrait",
+    "platforms": [
+      "ios",
+      "android"
+    ],
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "automatic",
     "splash": {
       "image": "./assets/splash.png",
       "resizeMode": "contain",
-      "backgroundColor": "#4CAF50"
+      "backgroundColor": "#000000"
     },
-    "plugins": [
-      "expo-splash-screen"
-    ],
+    "updates": {
+      "fallbackToCacheTimeout": 0
+    },
     "assetBundlePatterns": [
       "**/*"
     ],
+    "scheme": "economiza",
     "ios": {
-      "supportsTablet": true,
+      "supportsTablet": false,
       "bundleIdentifier": "com.economiza.app"
     },
     "android": {
+      "package": "com.economiza.app",
+      "permissions": [
+        "CAMERA",
+        "INTERNET"
+      ],
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#4CAF50"
+        "foregroundImage": "./assets/icon.png",
+        "backgroundColor": "#000000"
       },
-      "package": "com.economiza.app"
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "economiza"
+            }
+          ],
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
+        }
+      ]
     },
-    "web": {
-      "favicon": "./assets/favicon.png"
+    "plugins": [
+      "expo-camera",
+      "expo-sqlite",
+      "expo-secure-store"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "514c149c-45e5-4869-8ea3-4c77a62fac86"
+      }
     }
   }
 }
-

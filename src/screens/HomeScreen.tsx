@@ -1,301 +1,324 @@
+/**
+ * HomeScreen - Dashboard Moderno do Economiza
+ * 
+ * Exibe:
+ * - HeroCard: Total mensal + variação
+ * - MiniChart: Gráfico de gastos
+ * - Lista horizontal de Categorias
+ * - Últimas 5 compras usando ReceiptCard
+ */
+
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
+  Text,
   StyleSheet,
   ScrollView,
+  ActivityIndicator,
   RefreshControl,
+  FlatList,
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
-import { listReceipts, getMonthlySummary } from '../services/api';
-import { ReceiptListItem, MonthlySummaryResponse } from '../types/api';
-import { ScreenContainer, Button, Card, Typography, Loading } from '../components';
 import { useTheme } from '../theme/ThemeContext';
+import { listReceipts, getMonthlySummary } from '../services/api';
+import { ReceiptListItem } from '../types/api';
+import { formatCurrency, formatDate } from '../utils/formatters';
+import { HeroCard } from '../components/HeroCard';
+import { MiniChart } from '../components/MiniChart';
+import { ReceiptCard } from '../components/ReceiptCard';
+import { AppBar } from '../components/AppBar';
+import { CreditsBar } from '../components/CreditsBar';
 
-export const HomeScreen = () => {
+// Mapeamento de palavras-chave para categorias
+const CATEGORY_KEYWORDS: Record<string, string[]> = {
+  'Alimentação': ['arroz', 'feijão', 'açúcar', 'macarrão', 'farinha', 'óleo', 'sal', 'pão', 'leite', 'ovo', 'carne', 'frango', 'peixe', 'queijo', 'manteiga', 'iogurte', 'fruta', 'verdura', 'legume'],
+  'Limpeza': ['sabão', 'detergente', 'esponja', 'água sanitária', 'desinfetante', 'limpa vidros', 'lustra móveis', 'saco de lixo', 'papel toalha', 'alvejante'],
+  'Higiene': ['shampoo', 'condicionador', 'sabonete', 'pasta de dente', 'escova', 'papel higiênico', 'absorvente', 'desodorante', 'perfume'],
+  'Bebidas': ['refrigerante', 'suco', 'água', 'cerveja', 'vinho', 'café', 'chá', 'energético'],
+  'Outros': [],
+};
+
+const HomeScreen = () => {
+  const { colors } = useTheme();
+  const navigation = useNavigation<any>();
   const [receipts, setReceipts] = useState<ReceiptListItem[]>([]);
-  const [monthlySummary, setMonthlySummary] = useState<MonthlySummaryResponse | null>(null);
+  const [monthlyTotal, setMonthlyTotal] = useState<number>(0);
+  const [monthlyVariation, setMonthlyVariation] = useState<number | undefined>(undefined);
+  const [categories, setCategories] = useState([
+    { name: 'Alimentação', icon: '🍔', amount: 0 },
+    { name: 'Limpeza', icon: '🧹', amount: 0 },
+    { name: 'Higiene', icon: '🧴', amount: 0 },
+    { name: 'Bebidas', icon: '🥤', amount: 0 },
+    { name: 'Outros', icon: '📦', amount: 0 },
+  ]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const navigation = useNavigation();
-  const { colors } = useTheme();
 
-  const loadReceipts = async () => {
+  // Função para categorizar item baseado na descrição
+  const categorizeItem = (description: string): string => {
+    const descLower = description.toLowerCase();
+    for (const [category, keywords] of Object.entries(CATEGORY_KEYWORDS)) {
+      if (keywords.some(keyword => descLower.includes(keyword))) {
+        return category;
+      }
+    }
+    return 'Outros';
+  };
+
+  const loadData = async () => {
     try {
-      const response = await listReceipts(50, 0);
-      setReceipts(response.receipts);
+      const now = new Date();
+      const currentYear = now.getFullYear();
+      const currentMonth = now.getMonth() + 1; // getMonth() retorna 0-11, backend espera 1-12
+
+      // Buscar resumo mensal do backend
+      try {
+        const monthlySummary = await getMonthlySummary(currentYear, currentMonth, true);
+        setMonthlyTotal(monthlySummary.total_mes);
+        setMonthlyVariation(monthlySummary.variacao_vs_mes_anterior);
+
+        // Calcular categorias a partir do total_por_categoria
+        const categoryMap = new Map<string, number>();
+        Object.entries(monthlySummary.total_por_categoria).forEach(([cat, amount]) => {
+          categoryMap.set(cat, amount);
+        });
+
+        setCategories([
+          { name: 'Alimentação', icon: '🍔', amount: categoryMap.get('Alimentação') || 0 },
+          { name: 'Limpeza', icon: '🧹', amount: categoryMap.get('Limpeza') || 0 },
+          { name: 'Higiene', icon: '🧴', amount: categoryMap.get('Higiene') || 0 },
+          { name: 'Bebidas', icon: '🥤', amount: categoryMap.get('Bebidas') || 0 },
+          { name: 'Outros', icon: '📦', amount: categoryMap.get('Outros') || 0 },
+        ]);
+      } catch (error) {
+        console.warn('[HomeScreen] Erro ao buscar resumo mensal, calculando localmente:', error);
+        // Fallback: calcular localmente se o backend falhar
+        const response = await listReceipts(100, 0);
+        const allReceipts = response.receipts;
+
+        const monthlyReceipts = allReceipts.filter((receipt) => {
+          const receiptDate = receipt.emitted_at 
+            ? new Date(receipt.emitted_at) 
+            : receipt.created_at 
+            ? new Date(receipt.created_at)
+            : null;
+          
+          if (!receiptDate) return false;
+          
+          return (
+            receiptDate.getFullYear() === currentYear &&
+            receiptDate.getMonth() + 1 === currentMonth
+          );
+        });
+
+        const total = monthlyReceipts.reduce((sum, receipt) => sum + receipt.total_value, 0);
+        setMonthlyTotal(total);
+
+        // Calcular categorias a partir dos itens
+        const categoryAmounts = new Map<string, number>();
+        monthlyReceipts.forEach(receipt => {
+          receipt.items.forEach(item => {
+            const category = categorizeItem(item.description);
+            const current = categoryAmounts.get(category) || 0;
+            categoryAmounts.set(category, current + item.total_price);
+          });
+        });
+
+        setCategories([
+          { name: 'Alimentação', icon: '🍔', amount: categoryAmounts.get('Alimentação') || 0 },
+          { name: 'Limpeza', icon: '🧹', amount: categoryAmounts.get('Limpeza') || 0 },
+          { name: 'Higiene', icon: '🧴', amount: categoryAmounts.get('Higiene') || 0 },
+          { name: 'Bebidas', icon: '🥤', amount: categoryAmounts.get('Bebidas') || 0 },
+          { name: 'Outros', icon: '📦', amount: categoryAmounts.get('Outros') || 0 },
+        ]);
+      }
+
+      // Buscar últimas 5 notas para exibir
+      const response = await listReceipts(5, 0);
+      const last5Receipts = response.receipts
+        .sort((a, b) => {
+          const dateA = a.emitted_at || a.created_at || '';
+          const dateB = b.emitted_at || b.created_at || '';
+          return dateB.localeCompare(dateA);
+        });
+
+      setReceipts(last5Receipts);
     } catch (error) {
-      console.error('Erro ao carregar receipts:', error);
+      console.error('[HomeScreen] Erro ao carregar dados:', error);
       setReceipts([]);
+      setMonthlyTotal(0);
+      setMonthlyVariation(undefined);
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
   };
 
-  const loadMonthlySummary = async () => {
-    try {
-      const currentDate = new Date();
-      const currentYear = currentDate.getFullYear();
-      const currentMonth = currentDate.getMonth() + 1;
-      const summary = await getMonthlySummary(currentYear, currentMonth);
-      setMonthlySummary(summary);
-    } catch (error) {
-      console.error('Erro ao carregar resumo mensal:', error);
-      setMonthlySummary(null);
-    }
-  };
-
   useEffect(() => {
-    loadReceipts();
-    loadMonthlySummary();
+    loadData();
   }, []);
 
   useFocusEffect(
     useCallback(() => {
-      loadReceipts();
-      loadMonthlySummary();
+      loadData();
     }, [])
   );
 
   const handleRefresh = () => {
     setRefreshing(true);
-    loadReceipts();
-    loadMonthlySummary();
-  };
-
-  const handleOpenScanner = () => {
-    navigation.navigate('Scanner' as never);
+    loadData();
   };
 
   const handleReceiptPress = (receiptId: string) => {
-    navigation.navigate('ReceiptDetail' as never, { receiptId } as never);
-  };
-
-  const handleOpenAnalytics = () => {
-    navigation.navigate('Analytics' as never);
-  };
-
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL',
-    }).format(value);
-  };
-
-  const formatDate = (dateString: string | null) => {
-    if (!dateString) return 'Data não disponível';
-    return new Date(dateString).toLocaleDateString('pt-BR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-    });
+    navigation.navigate('ReceiptDetail', { receiptId });
   };
 
   if (loading) {
     return (
-      <ScreenContainer>
-        <Loading message="Carregando suas compras..." />
-      </ScreenContainer>
+      <View style={{ flex: 1 }}>
+        <AppBar title="HOME" />
+        <View style={[styles.container, { backgroundColor: colors.background }]}>
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size={40} color={colors.primary} />
+            <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Carregando...</Text>
+          </View>
+        </View>
+      </View>
     );
   }
 
   return (
-    <ScreenContainer scrollable>
-      <View style={[styles.header, { backgroundColor: colors.surface }]}>
-        <Typography variant="h1">Minhas Compras</Typography>
-      </View>
-
-      <View style={styles.actionsContainer}>
-        <Button
-          title="Escanear Nota"
-          onPress={handleOpenScanner}
-          variant="primary"
-          size="large"
-          fullWidth
-        />
-      </View>
-
-      {/* Card de Resumo Mensal */}
-      {monthlySummary && (
-        <Card variant="elevated" style={styles.summaryCard}>
-          <View style={styles.summaryHeader}>
-            <Typography variant="h4">Resumo do Mês</Typography>
-            <Button
-              title="Ver Detalhes"
-              onPress={handleOpenAnalytics}
-              variant="ghost"
-              size="small"
-            />
-          </View>
-          <View style={styles.summaryContent}>
-            <View style={styles.summaryItem}>
-              <Typography variant="caption" color="secondary">Total Gasto</Typography>
-              <Typography variant="h3" style={{ color: colors.primary }}>
-                {formatCurrency(monthlySummary.total_mes)}
-              </Typography>
-            </View>
-            <View style={[styles.summaryDivider, { backgroundColor: colors.divider }]} />
-            <View style={styles.summaryItem}>
-              <Typography variant="caption" color="secondary">Impostos</Typography>
-              <Typography variant="h4">
-                {formatCurrency(monthlySummary.total_mes * 0.1)}
-              </Typography>
-            </View>
-          </View>
-          <View style={[styles.miniChart, { backgroundColor: colors.surfaceVariant }]}>
-            <Typography variant="caption" color="tertiary">
-              📊 Gráfico de gastos (em desenvolvimento)
-            </Typography>
-          </View>
-        </Card>
-      )}
-
-      <View style={styles.actionsContainer}>
-        <Button
-          title="📊 Resumo de Gastos"
-          onPress={handleOpenAnalytics}
-          variant="secondary"
-          fullWidth
-        />
-      </View>
-
+    <View style={{ flex: 1 }}>
+      <AppBar title="HOME" />
       <ScrollView
-        style={styles.listContainer}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
-        }
+        style={{ flex: 1 }}
+        contentContainerStyle={{
+          padding: 16,
+          paddingBottom: 180,
+        }}
+        contentInset={{ bottom: 140 }}
+        contentInsetAdjustmentBehavior="automatic"
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />}
       >
+      {/* CreditsBar */}
+      <CreditsBar onPress={() => navigation.navigate('Settings' as never)} />
+
+      {/* HeroCard */}
+      <HeroCard total={monthlyTotal} variation={monthlyVariation} />
+
+      {/* MiniChart */}
+      <MiniChart title="Gastos por Semana" />
+
+      {/* Lista Horizontal de Categorias */}
+      <View style={styles.section}>
+        <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Categorias</Text>
+        <FlatList
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          data={categories}
+          keyExtractor={(item) => item.name}
+          renderItem={({ item }) => (
+            <View style={[styles.categoryCard, { backgroundColor: colors.surface }]}>
+              <Text style={styles.categoryIcon}>{item.icon}</Text>
+              <Text style={[styles.categoryName, { color: colors.textPrimary }]}>{item.name}</Text>
+              <Text style={[styles.categoryAmount, { color: colors.primary }]}>
+                {formatCurrency(item.amount)}
+              </Text>
+            </View>
+          )}
+        />
+      </View>
+
+      {/* Últimas Compras */}
+      <View style={styles.section}>
+        <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Últimas Compras</Text>
         {receipts.length === 0 ? (
-          <Card variant="outlined" style={styles.emptyCard}>
-            <Typography variant="h4" style={styles.emptyText}>
-              Nenhuma nota cadastrada
-            </Typography>
-            <Typography variant="body2" color="secondary" style={styles.emptySubtext}>
-              Escaneie uma nota fiscal para começar
-            </Typography>
-          </Card>
+          <View style={styles.emptyContainer}>
+            <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
+              Nenhuma compra registrada ainda
+            </Text>
+          </View>
         ) : (
           receipts.map((receipt) => (
-            <Card
+            <ReceiptCard
               key={receipt.id}
-              variant="elevated"
-              style={styles.receiptCard}
-            >
-              <View style={styles.cardHeader}>
-                <Typography variant="h4" style={styles.storeName}>
-                  {receipt.store_name || 'Loja não identificada'}
-                </Typography>
-                <Typography variant="h3" style={{ color: colors.primary }}>
-                  {formatCurrency(receipt.total_value)}
-                </Typography>
-              </View>
-              <View style={styles.cardDetails}>
-                <Typography variant="body2" color="secondary">
-                  {formatDate(receipt.emitted_at || receipt.created_at)}
-                </Typography>
-                {receipt.total_tax > 0 && (
-                  <View style={[styles.taxIndicator, { backgroundColor: colors.surfaceVariant }]}>
-                    <Typography variant="caption" color="secondary">
-                      Impostos: {formatCurrency(receipt.total_tax)}
-                    </Typography>
-                  </View>
-                )}
-              </View>
-              <Button
-                title="Ver Detalhes"
-                onPress={() => handleReceiptPress(receipt.id)}
-                variant="outline"
-                size="small"
-                style={styles.detailsButton}
-              />
-            </Card>
+              storeName={receipt.store_name || 'Loja não identificada'}
+              date={receipt.emitted_at || receipt.created_at || ''}
+              total={receipt.total_value}
+              onPress={() => handleReceiptPress(receipt.id)}
+            />
           ))
         )}
-      </ScrollView>
-    </ScreenContainer>
+      </View>
+    </ScrollView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  header: {
-    padding: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
-  },
-  actionsContainer: {
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-  },
-  summaryCard: {
-    marginHorizontal: 20,
-    marginBottom: 16,
-  },
-  summaryHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  summaryContent: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    paddingVertical: 16,
-  },
-  summaryItem: {
-    alignItems: 'center',
+  container: {
     flex: 1,
   },
-  summaryDivider: {
-    width: 1,
-    marginHorizontal: 16,
+  contentContainer: {
+    padding: 16,
+    paddingBottom: 32,
   },
-  miniChart: {
-    marginTop: 12,
-    padding: 12,
-    borderRadius: 8,
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
     alignItems: 'center',
   },
-  listContainer: {
-    flex: 1,
-    paddingHorizontal: 20,
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
   },
-  emptyCard: {
+  section: {
+    marginBottom: 24,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    marginBottom: 12,
+    letterSpacing: 0.5,
+  },
+  categoryCard: {
+    width: 120,
+    borderRadius: 12,
+    padding: 16,
+    marginRight: 12,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  categoryIcon: {
+    fontSize: 32,
+    marginBottom: 8,
+  },
+  categoryName: {
+    fontSize: 12,
+    fontWeight: '600',
+    marginBottom: 4,
+    textAlign: 'center',
+    flexWrap: 'nowrap',
+    maxWidth: 100,
+    includeFontPadding: false,
+    lineHeight: 16,
+  },
+  categoryAmount: {
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+  emptyContainer: {
     padding: 40,
     alignItems: 'center',
-    marginTop: 20,
   },
   emptyText: {
-    marginBottom: 8,
+    fontSize: 14,
     textAlign: 'center',
-  },
-  emptySubtext: {
-    textAlign: 'center',
-  },
-  receiptCard: {
-    marginBottom: 12,
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 12,
-  },
-  storeName: {
-    flex: 1,
-    marginRight: 12,
-  },
-  cardDetails: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  taxIndicator: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 4,
-  },
-  detailsButton: {
-    marginTop: 8,
   },
 });
+
+export default HomeScreen;

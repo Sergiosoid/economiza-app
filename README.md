@@ -258,6 +258,315 @@ O projeto usa a pasta `assets/` para armazenar imagens e recursos estáticos:
 
 O arquivo `assets/images/.keep` existe para garantir que a pasta `assets/images/` seja versionada no Git mesmo quando vazia. Isso evita erros do Expo que tentam fazer `scandir` em uma pasta que não existe no repositório.
 
+## Fluxo de Execução
+
+### Fluxo Completo do App
+
+1. **Inicialização**
+   - App verifica se é primeira execução (onboarding)
+   - Carrega preferências de tema (light/dark)
+   - Inicializa navegação
+
+2. **HomeScreen (Dashboard)**
+   - Busca resumo mensal via `GET /api/v1/analytics/monthly-summary`
+   - Calcula categorias a partir dos itens das notas
+   - Lista últimas 5 compras via `GET /api/v1/receipts/list?limit=5`
+   - Exibe total mensal e variação percentual
+
+3. **Scanner de QR Code**
+   - Abre câmera para escanear QR code da nota fiscal
+   - Navega para `ReceiptProcessingScreen` com o QR code
+
+4. **Processamento de Nota**
+   - Envia QR code via `POST /api/v1/receipts/scan`
+   - Backend processa e retorna:
+     - `receipt_id` se salvo com sucesso
+     - `task_id` se processamento em background
+     - `receipt_id` se já existe (409 Conflict)
+   - Navega para `ReceiptDetailScreen` com o `receipt_id`
+
+5. **Detalhes da Nota**
+   - Busca detalhes via `GET /api/v1/receipts/{receipt_id}`
+   - Exibe: loja, CNPJ, data, subtotal, impostos, total, lista de itens
+   - Permite abrir "Modo Empacotador" para correção de classificação
+
+### Integração com Backend
+
+O app consome os seguintes endpoints:
+
+- **`GET /api/v1/receipts/list`**: Lista notas fiscais (inclui `items[]`)
+- **`GET /api/v1/receipts/{id}`**: Detalhes completos de uma nota
+- **`POST /api/v1/receipts/scan`**: Escanear e processar QR code
+- **`GET /api/v1/analytics/monthly-summary`**: Resumo mensal com categorias
+- **`GET /api/v1/analytics/top-items`**: Itens mais comprados
+- **`GET /api/v1/analytics/compare-store`**: Comparação de preços entre lojas
+
+## Modo de Desenvolvimento (DEV_REAL_MODE)
+
+### O que é DEV_REAL_MODE?
+
+O `DEV_REAL_MODE` é um modo especial do backend que permite testar o app com dados fake mesmo quando um provider real está configurado. Isso é útil para:
+
+- **Desenvolvimento local**: Testar funcionalidades sem fazer requisições reais
+- **Testes automatizados**: Garantir que os testes não dependam de APIs externas
+- **Debugging**: Isolar problemas sem depender de serviços externos
+
+### Como Usar DEV_REAL_MODE
+
+1. **Configure o backend** (arquivo `.env` do backend):
+   ```env
+   DEV_REAL_MODE=true
+   PROVIDER_NAME=fake
+   DEV_MODE=true
+   ```
+
+2. **Inicie o backend**:
+   ```bash
+   cd economiza-backend
+   uvicorn app.main:app --reload
+   ```
+
+3. **Execute o app**:
+   ```bash
+   cd economiza-app
+   npm start
+   ```
+
+4. **Teste o fluxo completo**:
+   - Escaneie qualquer QR code (ou use um fake)
+   - O backend retornará dados fake: "SUPERMERCADO FAKE"
+   - Todas as notas terão os mesmos 3 itens de exemplo (Arroz, Feijão, Açúcar)
+
+### Dados Fake Retornados
+
+Quando `DEV_REAL_MODE=true`, o backend sempre retorna:
+
+- **Loja**: "SUPERMERCADO FAKE"
+- **CNPJ**: "12345678000190"
+- **Total**: R$ 125,30
+- **Subtotal**: R$ 119,00
+- **Impostos**: R$ 6,30
+- **Itens**: 
+  - ARROZ TIPO 1 5KG (1x R$ 25,50)
+  - FEIJAO PRETO 1KG (2x R$ 8,50)
+  - ACUCAR CRISTAL 1KG (1x R$ 4,80)
+
+### Desativar DEV_REAL_MODE
+
+Para usar o provider real:
+
+1. **Configure o backend**:
+   ```env
+   DEV_REAL_MODE=false
+   PROVIDER_NAME=webmania  # ou outro provider
+   PROVIDER_APP_KEY=sua-chave-real
+   PROVIDER_APP_SECRET=seu-secret-real
+   ```
+
+2. **Reinicie o backend**
+
+3. **Teste com QR codes reais** de notas fiscais
+
+## Build para Produção
+
+### Pré-requisitos
+
+1. **Conta Expo**: Crie uma conta em [expo.dev](https://expo.dev)
+2. **EAS CLI**: Instale o EAS CLI globalmente:
+   ```bash
+   npm install -g eas-cli
+   ```
+
+3. **Login no Expo**:
+   ```bash
+   eas login
+   ```
+
+### Configurar Projeto
+
+1. **Configure o `app.json`**:
+   ```json
+   {
+     "expo": {
+       "name": "Economiza",
+       "slug": "economiza-app",
+       "version": "1.0.0",
+       "orientation": "portrait",
+       "icon": "./assets/icon.png",
+       "splash": {
+         "image": "./assets/splash.png",
+         "resizeMode": "contain",
+         "backgroundColor": "#ffffff"
+       },
+       "updates": {
+         "fallbackToCacheTimeout": 0
+       },
+       "assetBundlePatterns": [
+         "**/*"
+       ],
+       "ios": {
+         "supportsTablet": true,
+         "bundleIdentifier": "com.economiza.app"
+       },
+       "android": {
+         "adaptiveIcon": {
+           "foregroundImage": "./assets/adaptive-icon.png",
+           "backgroundColor": "#ffffff"
+         },
+         "package": "com.economiza.app"
+       },
+       "web": {
+         "favicon": "./assets/favicon.png"
+       }
+     }
+   }
+   ```
+
+2. **Configure variáveis de ambiente**:
+   - Crie arquivo `.env` (não versionado):
+     ```env
+     EXPO_PUBLIC_API_BASE_URL=https://api.economiza.com.br
+     ```
+   - Atualize `src/config/api.ts` para usar:
+     ```typescript
+     const BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL || 'http://localhost:8000';
+     ```
+
+### Build Android
+
+1. **Configure o projeto EAS**:
+   ```bash
+   eas build:configure
+   ```
+
+2. **Crie o build**:
+   ```bash
+   eas build --platform android
+   ```
+
+3. **Acompanhe o progresso**:
+   - O build será processado na nuvem
+   - Você receberá um link para download do APK quando concluído
+
+4. **Distribuir**:
+   - **Google Play**: Faça upload do APK/AAB na Google Play Console
+   - **Teste interno**: Compartilhe o link do APK com testadores
+
+### Build iOS
+
+1. **Configure o projeto EAS**:
+   ```bash
+   eas build:configure
+   ```
+
+2. **Crie o build**:
+   ```bash
+   eas build --platform ios
+   ```
+
+3. **Acompanhe o progresso**:
+   - O build será processado na nuvem
+   - Você receberá um link para download do IPA quando concluído
+
+4. **Distribuir**:
+   - **App Store**: Use `eas submit` para enviar automaticamente
+   - **TestFlight**: Configure no Apple Developer Portal
+
+### Build com EAS Build
+
+```bash
+# Build para ambas as plataformas
+eas build --platform all
+
+# Build apenas para Android
+eas build --platform android
+
+# Build apenas para iOS
+eas build --platform ios
+
+# Build de produção (release)
+eas build --platform android --profile production
+
+# Build de desenvolvimento (debug)
+eas build --platform android --profile development
+```
+
+### Perfis de Build
+
+Configure perfis no `eas.json`:
+
+```json
+{
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal"
+    },
+    "preview": {
+      "distribution": "internal"
+    },
+    "production": {
+      "distribution": "store"
+    }
+  }
+}
+```
+
+### Submeter para Stores
+
+**Google Play**:
+```bash
+eas submit --platform android
+```
+
+**App Store**:
+```bash
+eas submit --platform ios
+```
+
+## Sistema de Créditos
+
+O Economiza utiliza um sistema de créditos para controlar o uso de funcionalidades premium, como escanear notas fiscais.
+
+### Como Funciona
+
+- **Créditos**: Cada ação consome créditos (ex: escanear nota = 1 crédito)
+- **Barra de Créditos**: Exibida no topo da HomeScreen, mostra saldo atual
+- **Compra de Créditos**: Quando os créditos acabam, o app oferece opção de compra
+- **Limite Mensal**: O backend pode configurar limite mensal do provider
+
+### Fluxo de Uso
+
+1. **Escanear Nota Fiscal**:
+   - App tenta consumir 1 crédito antes de escanear
+   - Se tiver créditos: processa normalmente
+   - Se não tiver: exibe modal oferecendo compra
+
+2. **Comprar Créditos**:
+   - Toque na barra de créditos na HomeScreen
+   - Ou toque em "Comprar Créditos" no modal
+   - Será redirecionado para checkout (Stripe)
+
+3. **Verificar Saldo**:
+   - Barra de créditos sempre visível na HomeScreen
+   - Cor muda para amarelo/vermelho quando créditos < 5
+
+### Endpoints de Créditos
+
+- **`GET /api/v1/credits`**: Obter saldo atual
+- **`POST /api/v1/credits/consume`**: Consumir crédito (chamado automaticamente)
+- **`POST /api/v1/credits/purchase/start`**: Iniciar compra de créditos
+
+### Configuração no Backend
+
+O backend pode configurar limite mensal via `PROVIDER_MONTHLY_LIMIT` no `.env`:
+
+```env
+PROVIDER_MONTHLY_LIMIT=100  # Limite de 100 requisições/mês por usuário
+```
+
+Se configurado, mesmo com créditos, o usuário não poderá exceder o limite mensal.
+
 ## Desenvolvimento
 
 ### Testando a Conexão
@@ -269,6 +578,25 @@ Use o botão "Testar Conexão com Backend" na tela inicial para verificar se o a
 - Logs do console aparecem no terminal onde o Expo está rodando
 - Use `console.log()` para debug
 - O React Native Debugger pode ser usado para inspecionar o estado da aplicação
+- Use `npx expo start -c` para limpar o cache do bundler
+
+### Testando Sistema de Créditos
+
+1. **Adicionar créditos manualmente** (via backend):
+   ```bash
+   # Conectar ao banco e atualizar:
+   UPDATE users SET credits = 10 WHERE email = 'dev@example.com';
+   ```
+
+2. **Testar consumo**:
+   - Escaneie uma nota fiscal
+   - Verifique que créditos diminuem
+   - Verifique histórico em `credit_usage`
+
+3. **Testar sem créditos**:
+   - Zere créditos: `UPDATE users SET credits = 0 WHERE email = 'dev@example.com';`
+   - Tente escanear nota
+   - Deve aparecer modal de compra
 
 ## Troubleshooting
 

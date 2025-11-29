@@ -7,10 +7,14 @@ import {
   ActivityIndicator,
   RefreshControl,
 } from 'react-native';
+import { useTheme } from '../theme/ThemeContext';
 import { getTopItems } from '../services/api';
 import { TopItem } from '../types/api';
+import { formatCurrency } from '../utils/formatters';
+import { AppBar } from '../components/AppBar';
 
-export const TopItemsScreen = () => {
+const TopItemsScreen = () => {
+  const { colors } = useTheme();
   const [items, setItems] = useState<TopItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -36,36 +40,29 @@ export const TopItemsScreen = () => {
     loadItems();
   };
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL',
-    }).format(value);
-  };
-
   const renderItem = ({ item, index }: { item: TopItem; index: number }) => (
-    <View style={styles.itemCard}>
+    <View style={[styles.itemCard, { backgroundColor: colors.surface }]}>
       <View style={styles.itemHeader}>
-        <View style={styles.rankBadge}>
-          <Text style={styles.rankText}>#{index + 1}</Text>
+        <View style={[styles.rankBadge, { backgroundColor: colors.primary }]}>
+          <Text style={[styles.rankText, { color: colors.textOnPrimary }]}>#{index + 1}</Text>
         </View>
         <View style={styles.itemInfo}>
-          <Text style={styles.itemName}>{item.description}</Text>
-          <Text style={styles.itemDetails}>
+          <Text style={[styles.itemName, { color: colors.textPrimary }]}>{item.description}</Text>
+          <Text style={[styles.itemDetails, { color: colors.textSecondary }]}>
             {item.total_quantity.toFixed(2)} unidades • {item.purchase_count} compras
           </Text>
         </View>
       </View>
-      <View style={styles.itemFooter}>
+      <View style={[styles.itemFooter, { borderTopColor: colors.border }]}>
         <View style={styles.priceInfo}>
-          <Text style={styles.priceLabel}>Preço Médio:</Text>
-          <Text style={styles.priceValue}>
+          <Text style={[styles.priceLabel, { color: colors.textSecondary }]}>Preço Médio:</Text>
+          <Text style={[styles.priceValue, { color: colors.textPrimary }]}>
             {formatCurrency(item.avg_price)}
           </Text>
         </View>
         <View style={styles.totalInfo}>
-          <Text style={styles.totalLabel}>Total Gasto:</Text>
-          <Text style={styles.totalValue}>
+          <Text style={[styles.totalLabel, { color: colors.textSecondary }]}>Total Gasto:</Text>
+          <Text style={[styles.totalValue, { color: colors.primary }]}>
             {formatCurrency(item.total_spent)}
           </Text>
         </View>
@@ -75,9 +72,12 @@ export const TopItemsScreen = () => {
 
   if (loading) {
     return (
-      <View style={styles.container}>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#007AFF" />
+      <View style={{ flex: 1 }}>
+        <AppBar title="PRODUCTS" />
+        <View style={[styles.container, { backgroundColor: colors.background }]}>
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size={40} color={colors.primary} />
+          </View>
         </View>
       </View>
     );
@@ -85,32 +85,37 @@ export const TopItemsScreen = () => {
 
   if (items.length === 0) {
     return (
-      <View style={styles.container}>
-        <View style={styles.emptyContainer}>
-          <Text style={styles.emptyText}>Nenhum item encontrado</Text>
-          <Text style={styles.emptySubtext}>
-            Comece a escanear notas fiscais para ver seus itens mais comprados
-          </Text>
+      <View style={{ flex: 1 }}>
+        <AppBar title="PRODUCTS" />
+        <View style={[styles.container, { backgroundColor: colors.background }]}>
+          <View style={styles.emptyContainer}>
+            <Text style={[styles.emptyText, { color: colors.textSecondary }]}>Nenhum item encontrado</Text>
+            <Text style={[styles.emptySubtext, { color: colors.textSecondary }]}>
+              Comece a escanear notas fiscais para ver seus itens mais comprados
+            </Text>
+          </View>
         </View>
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Itens Mais Comprados</Text>
-        <Text style={styles.subtitle}>{items.length} itens encontrados</Text>
-      </View>
-      <FlatList
+    <View style={{ flex: 1 }}>
+      <AppBar title="PRODUCTS" />
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <FlatList
         data={items}
         renderItem={renderItem}
         keyExtractor={(item, index) => `${item.description}-${index}`}
-        contentContainerStyle={styles.listContent}
+        contentContainerStyle={[
+          styles.listContent,
+          { paddingBottom: 120 },
+        ]}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
         }
       />
+      </View>
     </View>
   );
 };
@@ -118,7 +123,6 @@ export const TopItemsScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
   },
   loadingContainer: {
     flex: 1,
@@ -126,26 +130,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   header: {
-    backgroundColor: '#fff',
     padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
   },
   title: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#333',
     marginBottom: 4,
   },
   subtitle: {
     fontSize: 14,
-    color: '#666',
   },
   listContent: {
     padding: 16,
   },
   itemCard: {
-    backgroundColor: '#fff',
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
@@ -161,7 +160,6 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   rankBadge: {
-    backgroundColor: '#007AFF',
     borderRadius: 20,
     width: 40,
     height: 40,
@@ -170,7 +168,6 @@ const styles = StyleSheet.create({
     marginRight: 12,
   },
   rankText: {
-    color: '#fff',
     fontSize: 16,
     fontWeight: 'bold',
   },
@@ -180,32 +177,27 @@ const styles = StyleSheet.create({
   itemName: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#333',
     marginBottom: 4,
   },
   itemDetails: {
     fontSize: 14,
-    color: '#666',
   },
   itemFooter: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     paddingTop: 12,
     borderTopWidth: 1,
-    borderTopColor: '#f0f0f0',
   },
   priceInfo: {
     flex: 1,
   },
   priceLabel: {
     fontSize: 12,
-    color: '#666',
     marginBottom: 4,
   },
   priceValue: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#333',
   },
   totalInfo: {
     flex: 1,
@@ -213,13 +205,11 @@ const styles = StyleSheet.create({
   },
   totalLabel: {
     fontSize: 12,
-    color: '#666',
     marginBottom: 4,
   },
   totalValue: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#007AFF',
   },
   emptyContainer: {
     flex: 1,
@@ -229,13 +219,13 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 18,
-    color: '#666',
     marginBottom: 8,
   },
   emptySubtext: {
     fontSize: 14,
-    color: '#999',
     textAlign: 'center',
   },
 });
+
+export default TopItemsScreen;
 
